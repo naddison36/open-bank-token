@@ -1,0 +1,12 @@
+---
+  url: "ws://localhost:8647"
+
+  contractAddress: '0x4b1449Bc48408512Be41627bb757F23a7E5D3612' # Dev
+  contractOwner: '0xF55583FF8461DB9dfbBe90b5F3324f2A290c3356' # Dev
+
+  # the block the contract was deplyed in.
+  # This defaults to 0 if not set which makes getting the contract events slower as it has to scan the whole blockchain
+  contractAddressBlock: 0
+
+  symbol: 'DAD'
+  tokenName: 'Digital Australian Dollar Token'

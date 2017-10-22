@@ -1,0 +1,13 @@
+---
+#  url: "wss://mainnet.infura.io:443/ws"
+  url: "ws://localhost:8647/"
+
+  contractAddress: ''
+  contractOwner: ''
+
+  # the block the contract was deplyed in.
+  # This defaults to 0 if not set which makes getting the contract events slower as it has to scan the whole blockchain
+  contractAddressBlock:
+
+  symbol: 'DAD'
+  tokenName: 'Digital Australian Dollar Token'

@@ -1,0 +1,6 @@
+.vscode
+.idea
+node_modules
+testchain/geth
+testchain/parity
+testchain/history

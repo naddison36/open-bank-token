@@ -1,0 +1,44 @@
+[parity]
+mode = "last"
+
+chain = "Testchain"
+base_path = "../testchain/parity"
+db_path = "../testchain/parity/chains"
+keys_path = "../testchain/keystore"
+identity = "Testchain Node"
+light = false
+
+[websockets]
+disable = false
+port = 8647
+interface = "local"
+origins = ["none"]
+apis = ["web3", "eth", "net", "parity", "traces", "rpc", "secretstore"]
+hosts = ["none"]
+
+[ui]
+force = false
+disable = false
+port = 8181
+interface = "127.0.0.1"
+path = "../testchain/parity/signer"
+
+[ipc]
+disable = true
+
+[dapps]
+disable = true
+
+[secretstore]
+disable = true
+
+[ipfs]
+enable = false
+
+[vm]
+jit = false
+
+[misc]
+logging = "own_tx=trace"
+log_file = "../testchain/parity/testchain.log"
+color = true

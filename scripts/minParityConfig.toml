@@ -1,0 +1,12 @@
+[parity]
+mode = "last"
+
+chain = "MeetupChain"
+
+[websockets]
+disable = false
+port = 8647
+interface = "local"
+origins = ["none"]
+apis = ["web3", "eth", "net", "parity", "traces", "rpc", "secretstore"]
+hosts = ["none"]
