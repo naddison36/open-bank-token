@@ -8,6 +8,14 @@ keys_path = "../testchain/keystore"
 identity = "Testchain Node"
 light = false
 
+[rpc]
+disable = false
+port = 8646
+interface = "local"
+cors = "null"
+apis = ["web3", "eth", "net", "parity", "traces", "rpc", "secretstore"]
+hosts = ["none"]
+
 [websockets]
 disable = false
 port = 8647
@@ -17,8 +25,8 @@ apis = ["web3", "eth", "net", "parity", "traces", "rpc", "secretstore"]
 hosts = ["none"]
 
 [ui]
-force = false
 disable = false
+ui-no-validation = true
 port = 8181
 interface = "127.0.0.1"
 path = "../testchain/parity/signer"
@@ -27,7 +35,7 @@ path = "../testchain/parity/signer"
 disable = true
 
 [dapps]
-disable = true
+disable = false
 
 [secretstore]
 disable = true

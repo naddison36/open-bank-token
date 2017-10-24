@@ -1,6 +1,6 @@
 #!/bin/sh
 
-parity --chain testchainSpec.json --config parityDevConfig.toml --ws-port 8647
+parity --chain testchainSpec.json --config parityDevConfig.toml
 
 # generates a UI token
 #parity --chain testchainSpec.json --config parityDevConfig.toml signer new-token
