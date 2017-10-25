@@ -34,12 +34,11 @@ contract RestrictedBankToken is ERC20Token
     // used to track the state of withdrawals
     uint256 public withdrawalCounter = 0;
     mapping (uint256 => bool) confirmedWithdrawals;
-    
+
+    // constructor
     function RestrictedBankToken(string tokenSymbol, string tokenName)
-    {
-        sym = tokenSymbol;
-        nam = tokenName;
-    }
+        ERC20Token(tokenSymbol, tokenName)          // call constructor of base contract this contract is inheriting from
+    {}
 
     event Deposit(
         address indexed toAddress,

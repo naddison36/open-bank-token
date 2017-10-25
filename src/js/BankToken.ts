@@ -8,7 +8,7 @@ import * as Web3Types from 'web3/types.d'
 export default class BankToken extends Token
 {
     constructor(readonly url: string, contractOwner: string,
-                jsonInterface?: {}[], contractBinary?: string, contractAddress?: string)
+                jsonInterface?: {}, contractBinary?: string, contractAddress?: string)
     {
         super(url, contractOwner, jsonInterface, contractBinary, contractAddress);
     }
@@ -31,29 +31,16 @@ export default class BankToken extends Token
 
         return new Promise<string>(async(resolve, reject) =>
         {
-            const txData = self.contract.methods.deposit(toAddress, amount, externalId, bankTransactionId).encodeABI();
-
-            const tx = {
-                //from: self.contractOwner,
+            const signedTx = await self.ethSigner.signTransaction({
+                nonce: await self.web3.eth.getTransactionCount(self.contractOwner),
+                from: self.contractOwner,
                 to: self.contract.options.address,
                 gas: gas,
                 gasPrice: gasPrice,
-                data: txData
-            };
+                data: self.contract.methods.deposit(toAddress, amount, externalId, bankTransactionId).encodeABI()
+            });
 
-            const privateKey = '0xfa643e0ded9fd96209545b6cc9230376627012d8fb01cfa8d338b8a3aa4aeaaf';
-            const account = self.web3.eth.accounts.privateKeyToAccount(privateKey);
-            logger.debug(`created account ${account.address} from private key ${privateKey}`);
-
-            const signedTx = await account.signTransaction(tx);
-
-            self.contract.methods.deposit(toAddress, amount, externalId, bankTransactionId)
-            .send({
-                from: self.contractOwner,
-                gas: gas,
-                gasPrice: gasPrice
-            })
-            //self.web3.eth.sendSignedTransaction(signedTx.rawTransaction)
+            self.web3.eth.sendSignedTransaction(signedTx.rawTransaction)
             .on('transactionHash', (hash: string) =>
             {
                 logger.debug(`transaction hash ${hash} returned for ${description}`);

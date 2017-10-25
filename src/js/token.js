@@ -3,6 +3,8 @@ Object.defineProperty(exports, "__esModule", { value: true });
 const Web3 = require("web3");
 const VError = require("verror");
 const logger = require("config-logger");
+// TODO make this a contructor argument
+const ethSigner_hardcoded_1 = require("./ethSigner/ethSigner-hardcoded");
 class Token {
     constructor(url, contractOwner, jsonInterface, binary, contractAddress) {
         this.url = url;
@@ -18,6 +20,7 @@ class Token {
         this.contract = new this.web3.eth.Contract(jsonInterface, contractAddress, {
             from: contractOwner
         });
+        this.ethSigner = new ethSigner_hardcoded_1.default(this.web3);
         // TODO need a way to validate that web3 connected to a node. The following will not work as web3 1.0 no longer supports web3.isCOnnected()
         // https://github.com/ethereum/web3.js/issues/440
         // if (!this.web3.isConnected())
@@ -32,7 +35,7 @@ class Token {
         const self = this;
         this.contractOwner = contractOwner;
         const description = `deploy token with symbol ${symbol}, name "${tokenName}" from sender address ${self.contractOwner}, gas ${gas} and gasPrice ${gasPrice}`;
-        return new Promise((resolve, reject) => {
+        return new Promise(async (resolve, reject) => {
             logger.debug(`About to ${description}`);
             if (!self.binary) {
                 const error = new VError(`Binary for smart contract has not been set so can not ${description}.`);
@@ -40,15 +43,16 @@ class Token {
                 return reject(error);
             }
             try {
-                self.contract.deploy({
-                    data: self.binary,
-                    arguments: [symbol, tokenName]
-                })
-                    .send({
+                const encodedParams = self.web3.eth.abi.encodeParameters(['string', 'string'], [symbol, tokenName]);
+                const data = self.binary + encodedParams.slice(2); // remove the 0x at the start of the encoded parameters
+                const signedTx = await self.ethSigner.signTransaction({
+                    nonce: await self.web3.eth.getTransactionCount(self.contractOwner),
                     from: contractOwner,
                     gas: gas,
-                    gasPrice: gasPrice
-                })
+                    gasPrice: gasPrice,
+                    data: data
+                });
+                self.web3.eth.sendSignedTransaction(signedTx.rawTransaction)
                     .on('transactionHash', (hash) => {
                     logger.debug(`Got transaction hash ${hash} from ${description}`);
                     self.transactions[hash] = 0;
@@ -82,13 +86,16 @@ class Token {
         const gas = _gas || self.defaultGas;
         const gasPrice = _gasPrice || self.defaultGasPrice;
         const description = `transfer ${amount} tokens from address ${fromAddress}, to address ${toAddress}, contract ${this.contract._address}, gas limit ${gas} and gas price ${gasPrice}`;
-        return new Promise((resolve, reject) => {
-            self.contract.methods.transfer(toAddress, amount)
-                .send({
-                from: fromAddress,
+        return new Promise(async (resolve, reject) => {
+            const signedTx = await self.ethSigner.signTransaction({
+                nonce: await self.web3.eth.getTransactionCount(self.contractOwner),
+                from: self.contractOwner,
+                to: self.contract.options.address,
                 gas: gas,
-                gasPrice: gasPrice
-            })
+                gasPrice: gasPrice,
+                data: self.contract.methods.transfer(toAddress, amount).encodeABI()
+            });
+            self.web3.eth.sendSignedTransaction(signedTx.rawTransaction)
                 .on('transactionHash', (hash) => {
                 logger.debug(`transaction hash ${hash} returned for ${description}`);
                 self.transactions[hash] = 0;

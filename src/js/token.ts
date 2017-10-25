@@ -1,8 +1,12 @@
 import * as Web3 from 'web3';
 import * as VError from 'verror';
 import * as logger from 'config-logger';
+import IEthSigner from './ethSigner/index.d';
 
-import {TransactionReceipt, EventLog} from 'web3/types.d'
+// TODO make this a contructor argument
+import EthSigner from './ethSigner/ethSigner-hardcoded';
+]
+import {TransactionReceipt, EventLog} from 'web3/types.d';
 
 declare type HolderBalances = {
     [holderAddress: string] : number
@@ -11,6 +15,7 @@ declare type HolderBalances = {
 export default class Token
 {
     readonly web3: Web3;
+    ethSigner: IEthSigner;
 
     contract: any;
     contractAddress: string;
@@ -24,7 +29,7 @@ export default class Token
     transactions: { [transactionHash: string] : number; } = {};
 
     constructor(readonly url: string, contractOwner: string,
-                jsonInterface: {}[], binary?: string, contractAddress?: string)
+                jsonInterface: {}, binary?: string, contractAddress?: string)
     {
         this.contractAddress = contractAddress;
         this.contractOwner = contractOwner;
@@ -39,6 +44,8 @@ export default class Token
         this.contract = new this.web3.eth.Contract(jsonInterface, contractAddress, {
             from: contractOwner
         });
+
+        this.ethSigner = new EthSigner(this.web3);
 
         // TODO need a way to validate that web3 connected to a node. The following will not work as web3 1.0 no longer supports web3.isCOnnected()
         // https://github.com/ethereum/web3.js/issues/440
@@ -58,7 +65,7 @@ export default class Token
 
         const description = `deploy token with symbol ${symbol}, name "${tokenName}" from sender address ${self.contractOwner}, gas ${gas} and gasPrice ${gasPrice}`;
 
-        return new Promise<string>((resolve, reject) =>
+        return new Promise<string>(async (resolve, reject) =>
         {
             logger.debug(`About to ${description}`);
 
@@ -70,15 +77,18 @@ export default class Token
 
             try
             {
-                self.contract.deploy({
-                    data: self.binary,
-                    arguments: [symbol, tokenName]
-                })
-                .send({
+                const encodedParams = self.web3.eth.abi.encodeParameters(['string','string'], [symbol, tokenName]);
+                const data = self.binary + encodedParams.slice(2);  // remove the 0x at the start of the encoded parameters
+
+                const signedTx = await self.ethSigner.signTransaction({
+                    nonce: await self.web3.eth.getTransactionCount(self.contractOwner),
                     from: contractOwner,
                     gas: gas,
-                    gasPrice: gasPrice
-                })
+                    gasPrice: gasPrice,
+                    data: data
+                });
+
+                self.web3.eth.sendSignedTransaction(signedTx.rawTransaction)
                 .on('transactionHash', (hash: string) => {
                     logger.debug(`Got transaction hash ${hash} from ${description}`);
 
@@ -122,14 +132,18 @@ export default class Token
 
         const description = `transfer ${amount} tokens from address ${fromAddress}, to address ${toAddress}, contract ${this.contract._address}, gas limit ${gas} and gas price ${gasPrice}`;
 
-        return new Promise<string>((resolve, reject) =>
+        return new Promise<string>(async (resolve, reject) =>
         {
-            self.contract.methods.transfer(toAddress, amount)
-                .send({
-                    from: fromAddress,
-                    gas: gas,
-                    gasPrice: gasPrice
-                })
+            const signedTx = await self.ethSigner.signTransaction({
+                nonce: await self.web3.eth.getTransactionCount(self.contractOwner),
+                from: self.contractOwner,
+                to: self.contract.options.address,
+                gas: gas,
+                gasPrice: gasPrice,
+                data: self.contract.methods.transfer(toAddress, amount).encodeABI()
+            });
+
+            self.web3.eth.sendSignedTransaction(signedTx.rawTransaction)
                 .on('transactionHash', (hash: string) =>
                 {
                     logger.debug(`transaction hash ${hash} returned for ${description}`);

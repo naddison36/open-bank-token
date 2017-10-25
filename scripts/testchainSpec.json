@@ -1,7 +1,7 @@
 {
     "name": "Testchain",
     "engine": {
-		"instantSeal": { "params": {} }
+		"instantSeal": null
 	},
 	"genesis": {
 		"seal": {
@@ -13,7 +13,8 @@
 	"params": {
 			"networkID" : "0x2",
 			"maximumExtraDataSize": "0x20",
-			"minGasLimit": "0x1388"
+			"minGasLimit": "0x1388",
+			"gasLimitBoundDivisor": "0x400"
 	},
 	"accounts": {
 		"0xd728cee2648a642fda9dc1218d2d5746848400ba": { "balance": "10000000000000000000000000"},

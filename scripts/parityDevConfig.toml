@@ -4,7 +4,7 @@ mode = "last"
 chain = "Testchain"
 base_path = "../testchain/parity"
 db_path = "../testchain/parity/chains"
-keys_path = "../testchain/keystore"
+keys_path = "../testchain/parity/keystore"
 identity = "Testchain Node"
 light = false
 
@@ -26,7 +26,7 @@ hosts = ["none"]
 
 [ui]
 disable = false
-ui-no-validation = true
+force  = false
 port = 8181
 interface = "127.0.0.1"
 path = "../testchain/parity/signer"
@@ -47,6 +47,6 @@ enable = false
 jit = false
 
 [misc]
-logging = "own_tx=trace"
+logging = "info"
 log_file = "../testchain/parity/testchain.log"
 color = true

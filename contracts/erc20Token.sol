@@ -32,6 +32,13 @@ contract ERC20Token
     // Allowances mapping
     mapping (address => mapping (address => uint256)) allowed;
 
+    // constructor
+    function ERC20Token(string tokenSymbol, string tokenName)
+    {
+        sym = tokenSymbol;
+        nam = tokenName;
+    }
+
 /* Events */
     // Triggered when tokens are transferred.
     event Transfer(
