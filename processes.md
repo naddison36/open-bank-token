@@ -13,37 +13,33 @@ An Ethereum address, or an externally owned account (EOA), consists of a private
 
 The public key is the actual address that is shared with others. It's also what the tokens will be issued to later in the process. The Ethereum public address is 42 characters and starts with `0x`.
 
-2. Watch bank token contract.
-
-The token holder adds the Bank Token contract to their Ethereum wallet. This will then display the number of tokens the user has. Initially, the balance will be zero. 
-
-3. Token holder registers their Ethereum address in their Meetup profile.
+2. Token holder registers their Ethereum address in their Meetup profile.
 
 Since the Ethereum address is too big to send in an Australian electronic transfer between bank accounts, a different reference number has to be used to identify which address the tokens should be issued to. Following what was previously done with the [Sydney Ethereum Meetup token](https://github.com/SydEthereum/meetup-token#meetup-token), the address of the token holder will be registered in their Meetup profile for the [Sydney Ethereum meetup](http://sydeth.com/) group. This is done by saving the address in the introduction section of the member's profile. For example https://www.meetup.com/SydEthereum/members/140526032/.
 
-4. Token holder initiates a bank payment.
+3. Token holder initiates a bank payment.
 
 Through their bank, the token holder makes a payment to the Token Issuer's bank account. In Australia, this is currently done via an Electronic Funds Transfer. The reference field of the payment needs to include the token holder's meetup identifier.
 
-5. Token Holder's Bank does a credit transfer to the Issuer's Bank
+4. Token Holder's Bank does a credit transfer to the Issuer's Bank
 
 The token holder's bank will send the funds to the Token Issuer's bank. In Australia, that is currently done via the Direct Entry system and will clear a number of times each weekday.
 
-6. Bank to Token Integration checks for new deposits
+5. Bank to Token Integration checks for new deposits
 
 The token issuer will periodically run a program to look for new deposits in the the Token Issuer's bank account. This will use bank Application Programming Interfaces (APIs) so the process is automated.
 
-7. Bank to Token Integration gets Ethereum address
+6. Bank to Token Integration gets Ethereum address
 
 For each new deposit, the payment reference will be used to get the meetup identifier. The program will then use the [Meetup APIs](https://www.meetup.com/meetup_api/) to get the Ethereum address from the introduction field of the token holder's Sydney Ethereum profile.
 
-8. Bank to Token Integration issues tokens
+7. Bank to Token Integration issues tokens
 
 Assuming an Ethereum address was retried from the Meetup profile, the Bank to Token Integration program issues the same number of tokens to the Ethereum address as the number of dollars that were deposited in the Token Issuer's bank account.
 
 The token contract records the token holder's address so they can now also receive token transfers from other token holders.
 
-9. Token holder's wallet updated the token balance
+8. Token holder's wallet updated the token balance
 
 This can happen a number of different ways. The wallet can either look at the token state when the token holder next looks at their wallet. Or the wallet can be listening for events emitted from the Token Contract so it can update the token holder's token balance.
 
