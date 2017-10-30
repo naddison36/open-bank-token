@@ -5,8 +5,8 @@
   contractAddress: ''
   contractOwner: ''
 
-  # the block the contract was deplyed in.
-  # This defaults to 0 if not set which makes getting the contract events slower as it has to scan the whole blockchain
+  # the block the web3Contract was deplyed in.
+  # This defaults to 0 if not set which makes getting the web3Contract events slower as it has to scan the whole blockchain
   contractAddressBlock:
 
   symbol: 'DAD'

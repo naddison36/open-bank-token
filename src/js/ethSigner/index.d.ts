@@ -1,6 +1,4 @@
 
-import * as Web3 from 'web3';
-
 import {TransactionReceipt} from 'web3/types.d';
 export {TransactionReceipt} from 'web3/types.d';
 
@@ -14,7 +12,8 @@ export declare interface Transaction {
     data?: string
 }
 
-export default class EthSigner {
-    constructor(web3: Web3);
+export declare class EthSigner {
+    constructor();
     signTransaction(tx: Transaction): Promise<TransactionReceipt>;
+    getPrivateKey(address: string): Promise<string>;
 }

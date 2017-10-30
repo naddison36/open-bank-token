@@ -1,19 +1,20 @@
 import * as VError from 'verror';
 import * as logger from 'config-logger';
+import {Wallet, Contract} from 'ethers';
 
 import Token from './token';
 
-import * as Web3Types from 'web3/types.d'
+import {EthSigner} from './ethSigner/index.d';
 
 export default class BankToken extends Token
 {
-    constructor(readonly url: string, contractOwner: string,
+    constructor(readonly url: string, contractOwner: string, readonly ethSigner: EthSigner,
                 jsonInterface?: {}, contractBinary?: string, contractAddress?: string)
     {
-        super(url, contractOwner, jsonInterface, contractBinary, contractAddress);
+        super(url, contractOwner, ethSigner, jsonInterface, contractBinary, contractAddress);
     }
 
-    // deploy a new contract
+    // deploy a new web3Contract
     deployContract(contractOwner: string, symbol = "DAD", tokenName = "Digital Australian Dollar", gas = 1900000, gasPrice = 4000000000): Promise<string>
     {
         return super.deployContract(contractOwner, symbol, tokenName, gas, gasPrice);
@@ -27,48 +28,30 @@ export default class BankToken extends Token
         const gas = _gas || self.defaultGas;
         const gasPrice = _gasPrice || self.defaultGasPrice;
 
-        const description = `deposit ${amount} tokens to address ${toAddress}, from sender address ${self.contractOwner}, contract ${this.contract._address}, external id ${externalId}, bank transaction id ${bankTransactionId}, gas limit ${gas} and gas price ${gasPrice}`;
+        const description = `deposit ${amount} tokens to address ${toAddress}, from sender address ${self.contractOwner}, contract ${this.web3Contract._address}, external id ${externalId}, bank transaction id ${bankTransactionId}, gas limit ${gas} (0x${gas.toString(16)}) and gas price ${gasPrice} (0x${gasPrice.toString(16)})`;
 
         return new Promise<string>(async(resolve, reject) =>
         {
-            const signedTx = await self.ethSigner.signTransaction({
-                nonce: await self.web3.eth.getTransactionCount(self.contractOwner),
-                from: self.contractOwner,
-                to: self.contract.options.address,
-                gas: gas,
-                gasPrice: gasPrice,
-                data: self.contract.methods.deposit(toAddress, amount, externalId, bankTransactionId).encodeABI()
-            });
+            try
+            {
+                // send the transaction
+                const broadcastTransaction = await self.contract.deposit(toAddress, amount, externalId, bankTransactionId, {
+                    gasPrice: gasPrice,
+                    gasLimit: gas
+                });
 
-            self.web3.eth.sendSignedTransaction(signedTx.rawTransaction)
-            .on('transactionHash', (hash: string) =>
-            {
-                logger.debug(`transaction hash ${hash} returned for ${description}`);
-                self.transactions[hash] = 0;
-            })
-            .on('receipt', (receipt: Web3Types.TransactionReceipt) =>
-            {
-                if (receipt.status == '0x0') {
-                    const error = new VError(`Exception thrown for ${description}`);
-                    logger.error(error.stack);
-                    return reject(error);
-                }
+                logger.debug(`${broadcastTransaction.hash} is transaction hash and nonce ${broadcastTransaction.nonce} for ${description}`);
 
-                logger.debug(`${receipt.gasUsed} gas used of a ${gas} gas limit for ${description}`);
-                resolve(receipt.transactionHash);
-            })
-            .on('confirmation', (confirmationNumber: number, receipt: Web3Types.TransactionReceipt) =>
-            {
-                logger.trace(`${confirmationNumber} confirmations for ${description} with transaction hash ${receipt.transactionHash}`);
+                await self.processTransaction(broadcastTransaction.hash, description, gas);
 
-                self.transactions[receipt.transactionHash] = confirmationNumber;
-            })
-            .on('error', (err: Error) =>
+                resolve(broadcastTransaction.hash);
+            }
+            catch (err)
             {
-                const error = new VError(err, `Could not ${description}`);
+                const error = new VError(err, `Failed to ${description}.`);
                 logger.error(error.stack);
                 reject(error);
-            });
+            }
         });
     }
 
@@ -80,40 +63,35 @@ export default class BankToken extends Token
         const gas = _gas || self.defaultGas;
         const gasPrice = _gasPrice || self.defaultGasPrice;
 
-        const description = `request withdraw of ${amount} tokens from contract ${this.contract._address} and token holder ${tokenHolderAddress}`;
+        const description = `request withdraw of ${amount} tokens from contract ${this.web3Contract._address} and token holder ${tokenHolderAddress}`;
 
-        return new Promise<string>((resolve, reject) =>
+        return new Promise<string>(async(resolve, reject) =>
         {
-            self.contract.methods.requestWithdrawal(amount).send({
-                from: tokenHolderAddress
-            })
-            .on('transactionHash', (hash: string) =>
+            try
             {
-                logger.info(`${description} returned transaction hash ${hash}`);
-                self.transactions[hash] = 0;
-            })
-            .on('receipt', (receipt: Web3Types.TransactionReceipt) =>
-            {
-                if (receipt.status == '0x0') {
-                    const error = new VError(`Exception thrown for ${description}`);
-                    logger.error(error.stack);
-                    return reject(error);
-                }
+                const privateKey = await self.ethSigner.getPrivateKey(tokenHolderAddress);
+                const wallet = new Wallet(privateKey, self.provider);
 
-                logger.debug(`${receipt.gasUsed} gas used of a ${gas} gas limit for ${description}`);
-                resolve(receipt.transactionHash);
-            })
-            .on('confirmation', (confirmationNumber: number, receipt: Web3Types.TransactionReceipt) =>
+                const contract = new Contract(self.contract.address, self.jsonInterface, wallet);
+
+                // send the transaction
+                const broadcastTransaction = await contract.requestWithdrawal(amount, {
+                    gasPrice: gasPrice,
+                    gasLimit: gas
+                });
+
+                logger.debug(`${broadcastTransaction.hash} is transaction hash and nonce ${broadcastTransaction.nonce} for ${description}`);
+
+                await self.processTransaction(broadcastTransaction.hash, description, gas);
+
+                resolve(broadcastTransaction.hash);
+            }
+            catch (err)
             {
-                logger.trace(`${confirmationNumber} confirmations for ${description} with transaction hash ${receipt.transactionHash}`);
-                self.transactions[receipt.transactionHash] = confirmationNumber;
-            })
-            .on('error', (err: Error) =>
-            {
-                const error = new VError(err, `Could not ${description}`);
+                const error = new VError(err, `Failed to ${description}.`);
                 logger.error(error.stack);
                 reject(error);
-            });
+            }
         });
     }
 
@@ -124,53 +102,43 @@ export default class BankToken extends Token
         const gas = _gas || self.defaultGas;
         const gasPrice = _gasPrice || self.defaultGasPrice;
 
-        const description = `confirm withdrawal number ${withdrawalNumber} against contract ${this.contract._address} using contract owner ${self.contractOwner}`;
+        const description = `confirm withdrawal number ${withdrawalNumber} against contract ${this.web3Contract._address} using contract owner ${self.contractOwner}`;
 
-        return new Promise<string>((resolve, reject) =>
+        return new Promise<string>(async(resolve, reject) =>
         {
-            self.contract.methods.confirmWithdraw(withdrawalNumber).send({
-                from: self.contractOwner
-            })
-                .on('transactionHash', (hash: string) =>
-                {
-                    logger.info(`${description} returned transaction hash ${hash}`);
-                    self.transactions[hash] = 0;
-                })
-                .on('receipt', (receipt: Web3Types.TransactionReceipt) =>
-                {
-                    if (receipt.status == '0x0') {
-                        const error = new VError(`Exception thrown for ${description}`);
-                        logger.error(error.stack);
-                        return reject(error);
-                    }
-
-                    logger.debug(`${receipt.gasUsed} gas used of a ${gas} gas limit for ${description}`);
-                    resolve(receipt.transactionHash);
-                })
-                .on('confirmation', (confirmationNumber: number, receipt: Web3Types.TransactionReceipt) =>
-                {
-                    logger.trace(`${confirmationNumber} confirmations for ${description} with transaction hash ${receipt.transactionHash}`);
-                    self.transactions[receipt.transactionHash] = confirmationNumber;
-                })
-                .on('error', (err: Error) =>
-                {
-                    const error = new VError(err, `Could not ${description}`);
-                    logger.error(error.stack);
-                    reject(error);
+            try
+            {
+                // send the transaction
+                const broadcastTransaction = await self.contract.confirmWithdraw(withdrawalNumber, {
+                    gasPrice: gasPrice,
+                    gasLimit: gas
                 });
+
+                logger.debug(`${broadcastTransaction.hash} is transaction hash and nonce ${broadcastTransaction.nonce} for ${description}`);
+
+                await self.processTransaction(broadcastTransaction.hash, description, gas);
+
+                resolve(broadcastTransaction.hash);
+            }
+            catch (err)
+            {
+                const error = new VError(err, `Failed to ${description}.`);
+                logger.error(error.stack);
+                reject(error);
+            }
         });
     }
 
     async isTokenHolder(address: string): Promise<boolean>
     {
-        const description = `is address ${address} a token holder in contract at address ${this.contract._address}`;
+        const description = `is address ${address} a token holder in contract at address ${this.web3Contract._address}`;
 
         try
         {
-            const result: boolean = await this.contract.methods.isTokenHolder(address).call();
+            const result = await this.contract.isTokenHolder(address);
 
-            logger.info(`Got ${result} result for ${description}`);
-            return result;
+            logger.info(`Got ${result[0]} result for ${description}`);
+            return result[0];
         }
         catch (err)
         {
@@ -182,14 +150,14 @@ export default class BankToken extends Token
 
     async hasBankTransactionId(bankTransactionId: string): Promise<boolean>
     {
-        const description = `has bank transaction id ${bankTransactionId} been used in contract at address ${this.contract._address}`;
+        const description = `has bank transaction id ${bankTransactionId} been used in contract at address ${this.web3Contract._address}`;
 
         try
         {
-            const result: boolean = await this.contract.methods.hasBankTransactionId(bankTransactionId).call();
+            const result = await this.contract.hasBankTransactionId(bankTransactionId);
 
-            logger.info(`Got ${result} result for ${description}`);
-            return result;
+            logger.info(`Got ${result[0]} result for ${description}`);
+            return result[0];
         }
         catch (err)
         {

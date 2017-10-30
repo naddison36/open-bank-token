@@ -1,12 +1,13 @@
 import * as Web3 from 'web3';
-import * as VError from 'verror';
+import {Wallet, Contract,
+    providers as Providers,
+    provider as Provider} from 'ethers';
+import * as BigNumber from 'bn.js';
 import * as logger from 'config-logger';
-import IEthSigner from './ethSigner/index.d';
+import * as VError from 'verror';
 
-// TODO make this a contructor argument
-import EthSigner from './ethSigner/ethSigner-hardcoded';
-]
 import {TransactionReceipt, EventLog} from 'web3/types.d';
+import {EthSigner} from './ethSigner/index.d';
 
 declare type HolderBalances = {
     [holderAddress: string] : number
@@ -15,49 +16,42 @@ declare type HolderBalances = {
 export default class Token
 {
     readonly web3: Web3;
-    ethSigner: IEthSigner;
+    readonly provider: Provider;
 
-    contract: any;
-    contractAddress: string;
+    // TODO the following needs to be removed events switched from web3 to Ethers
+    web3Contract: object;
+    contract: object;
     contractOwner: string;
-
-    binary: string;
+    contractBinary: string;
 
     defaultGas = 120000;
     defaultGasPrice = 2000000000;
 
     transactions: { [transactionHash: string] : number; } = {};
 
-    constructor(readonly url: string, contractOwner: string,
-                jsonInterface: {}, binary?: string, contractAddress?: string)
+    constructor(readonly url: string, contractOwner: string, readonly ethSigner: EthSigner,
+                readonly jsonInterface: {}, binary?: string, contractAddress?: string)
     {
-        this.contractAddress = contractAddress;
         this.contractOwner = contractOwner;
-        this.binary = binary;
+        this.contractBinary = binary;
 
         const description = `connect to Ethereum node using url ${url}`;
 
         logger.debug(`About to ${description}`);
 
         this.web3 = new Web3(url);
+        this.provider = new Providers.JsonRpcProvider(url, true, 100);  // ChainId 100 = 0x64
 
-        this.contract = new this.web3.eth.Contract(jsonInterface, contractAddress, {
+        this.web3Contract = new this.web3.eth.Contract(jsonInterface, contractAddress, {
             from: contractOwner
         });
 
-        this.ethSigner = new EthSigner(this.web3);
+        this.contract = new Contract(contractAddress, jsonInterface, this.provider);
 
-        // TODO need a way to validate that web3 connected to a node. The following will not work as web3 1.0 no longer supports web3.isCOnnected()
-        // https://github.com/ethereum/web3.js/issues/440
-        // if (!this.web3.isConnected())
-        // {
-        //     const error = new VError(`Failed to ${description}.`);
-        //     logger.error(error.stack);
-        //     throw(error);
-        // }
+        this.ethSigner = ethSigner;
     }
 
-    // deploy a new contract
+    // deploy a new web3Contract
     deployContract(contractOwner: string, symbol: string, tokenName: string, gas = 1900000, gasPrice = 4000000000): Promise<string>
     {
         const self = this;
@@ -69,7 +63,7 @@ export default class Token
         {
             logger.debug(`About to ${description}`);
 
-            if (!self.binary) {
+            if (!self.contractBinary) {
                 const error = new VError(`Binary for smart contract has not been set so can not ${description}.`);
                 logger.error(error.stack);
                 return reject(error);
@@ -77,41 +71,26 @@ export default class Token
 
             try
             {
-                const encodedParams = self.web3.eth.abi.encodeParameters(['string','string'], [symbol, tokenName]);
-                const data = self.binary + encodedParams.slice(2);  // remove the 0x at the start of the encoded parameters
+                const deployTransaction = Contract.getDeployTransaction(self.contractBinary, self.jsonInterface, symbol, tokenName);
 
-                const signedTx = await self.ethSigner.signTransaction({
-                    nonce: await self.web3.eth.getTransactionCount(self.contractOwner),
-                    from: contractOwner,
-                    gas: gas,
-                    gasPrice: gasPrice,
-                    data: data
-                });
+                const wallet = new Wallet(await self.ethSigner.getPrivateKey(contractOwner), self.provider);
 
-                self.web3.eth.sendSignedTransaction(signedTx.rawTransaction)
-                .on('transactionHash', (hash: string) => {
-                    logger.debug(`Got transaction hash ${hash} from ${description}`);
+                // Send the transaction
+                const broadcastTransaction = await wallet.sendTransaction(deployTransaction);
 
-                    self.transactions[hash] = 0;
-                })
-                .on('receipt', (receipt: TransactionReceipt) => {
-                    logger.debug(`Created contract with address ${receipt.contractAddress} using ${receipt.gasUsed} gas for ${description}`);
+                logger.debug(`${broadcastTransaction.hash} is transaction hash for ${description}`);
 
-                    self.contractAddress = receipt.contractAddress;
-                    self.contract.options.address = receipt.contractAddress;
-                    resolve(receipt.contractAddress);
-                })
-                .on('confirmation', (confirmationNumber: number, receipt: TransactionReceipt) =>
-                {
-                    logger.trace(`${confirmationNumber} confirmations for ${description} with transaction hash ${receipt.transactionHash}`);
+                // wait for the transaction to be mined
+                const minedTransaction = await self.provider.waitForTransaction(broadcastTransaction.hash);
 
-                    self.transactions[receipt.transactionHash] = confirmationNumber;
-                })
-                .on('error', (err: Error) => {
-                    const error = new VError(err, `Failed to ${description}.`);
-                    logger.error(error.stack);
-                    reject(error);
-                });
+                logger.debug(`Created contract with address ${minedTransaction.creates} using ? gas for ${description}`);
+
+                // TODO once all is switched to Ethers then the following can be removed
+                self.web3Contract.options.address = minedTransaction.creates;
+
+                self.contract = new Contract(minedTransaction.creates, self.jsonInterface, wallet);
+
+                resolve(minedTransaction.creates);
             }
             catch (err)
             {
@@ -130,58 +109,45 @@ export default class Token
         const gas = _gas || self.defaultGas;
         const gasPrice = _gasPrice || self.defaultGasPrice;
 
-        const description = `transfer ${amount} tokens from address ${fromAddress}, to address ${toAddress}, contract ${this.contract._address}, gas limit ${gas} and gas price ${gasPrice}`;
+        const description = `transfer ${amount} tokens from address ${fromAddress}, to address ${toAddress}, contract ${this.web3Contract._address}, gas limit ${gas} and gas price ${gasPrice}`;
 
         return new Promise<string>(async (resolve, reject) =>
         {
-            const signedTx = await self.ethSigner.signTransaction({
-                nonce: await self.web3.eth.getTransactionCount(self.contractOwner),
-                from: self.contractOwner,
-                to: self.contract.options.address,
-                gas: gas,
-                gasPrice: gasPrice,
-                data: self.contract.methods.transfer(toAddress, amount).encodeABI()
-            });
+            try
+            {
+                const privateKey = await self.ethSigner.getPrivateKey(fromAddress);
+                const wallet = new Wallet(privateKey, self.provider);
 
-            self.web3.eth.sendSignedTransaction(signedTx.rawTransaction)
-                .on('transactionHash', (hash: string) =>
-                {
-                    logger.debug(`transaction hash ${hash} returned for ${description}`);
-                    self.transactions[hash] = 0;
-                })
-                .on('receipt', (receipt: TransactionReceipt) =>
-                {
-                    if (receipt.status == '0x0') {
-                        const error = new VError(`Exception thrown for ${description}`);
-                        logger.error(error.stack);
-                        return reject(error);
-                    }
+                const contract = new Contract(self.contract.address, self.jsonInterface, wallet);
 
-                    logger.debug(`${receipt.gasUsed} gas used of a ${gas} gas limit for ${description}`);
-                    resolve(receipt.transactionHash);
-                })
-                .on('confirmation', (confirmationNumber: number, receipt: TransactionReceipt) =>
-                {
-                    logger.trace(`${confirmationNumber} confirmations for ${description} with transaction hash ${receipt.transactionHash}`);
-
-                    self.transactions[receipt.transactionHash] = confirmationNumber;
-                })
-                .on('error', (err: Error) =>
-                {
-                    const error = new VError(err, `Could not ${description}`);
-                    logger.error(error.stack);
-                    reject(error);
+                // send the transaction
+                const broadcastTransaction = await contract.transfer(toAddress, amount, {
+                    gasPrice: gasPrice,
+                    gasLimit: gas
                 });
+
+                logger.debug(`${broadcastTransaction.hash} is transaction hash and nonce ${broadcastTransaction.nonce} for ${description}`);
+
+                const transactionReceipt = await self.processTransaction(broadcastTransaction.hash, description, gas);
+
+                resolve(broadcastTransaction.hash);
+            }
+            catch (err) {
+                const error = new VError(err, `Failed to ${description}.`);
+                logger.error(error.stack);
+                reject(error);
+            }
         });
     }
 
     async getSymbol(): Promise<string>
     {
-        const description = `symbol of contract at address ${this.contract._address}`;
+        const description = `symbol of contract at address ${this.contract.address}`;
 
         try
         {
-            const symbol = await this.contract.methods.symbol().call();
+            const result = await this.contract.symbol();
+            const symbol = result[0];
 
             logger.info(`Got ${symbol} ${description}`);
             return symbol;
@@ -196,11 +162,12 @@ export default class Token
 
     async getName(): Promise<string>
     {
-        const description = `name of contract at address ${this.contract._address}`;
+        const description = `name of contract at address ${this.contract.address}`;
 
         try
         {
-            const name = await this.contract.methods.name().call();
+            const result = await this.contract.name();
+            const name = result[0];
 
             logger.info(`Got "${name}" ${description}`);
             return name;
@@ -215,12 +182,12 @@ export default class Token
 
     async getDecimals(): Promise<number>
     {
-        const description = `number of decimals for contract at address ${this.contract._address}`;
+        const description = `number of decimals for contract at address ${this.contract.address}`;
 
         try
         {
-            const decimalsStr = await this.contract.methods.decimals().call();
-            const decimals = Number(decimalsStr);
+            const result = await this.contract.decimals();
+            const decimals = result[0];
 
             logger.info(`Got ${decimals} ${description}`);
             return decimals;
@@ -233,16 +200,16 @@ export default class Token
         }
     }
 
-    async getTotalSupply(): Promise<number>
+    async getTotalSupply(): Promise<BigNumber>
     {
-        const description = `total supply of contract at address ${this.contract._address}`;
+        const description = `total supply of contract at address ${this.contract.address}`;
 
         try
         {
-            const totalSupplyStr = await this.contract.methods.totalSupply().call();
-            const totalSupply = Number(totalSupplyStr);
+            const result = await this.contract.totalSupply();
+            const totalSupply: BigNumber = result[0]._bn;
 
-            logger.info(`Got ${totalSupply} ${description}`);
+            logger.info(`Got ${totalSupply.toString()} ${description}`);
             return totalSupply;
         }
         catch (err)
@@ -253,14 +220,14 @@ export default class Token
         }
     }
 
-    async getBalanceOf(address: string): Promise<number>
+    async getBalanceOf(address: string): Promise<BigNumber>
     {
-        const description = `balance of address ${address} in contract at address ${this.contract._address}`;
+        const description = `balance of address ${address} in contract at address ${this.contract.address}`;
 
         try
         {
-            const balanceStr: string = await this.contract.methods.balanceOf(address).call();
-            const balance: number = Number(balanceStr);
+            const result = await this.contract.balanceOf(address);
+            const balance: BigNumber = result[0]._bn;
 
             logger.info(`Got ${balance} ${description}`);
             return balance;
@@ -275,7 +242,7 @@ export default class Token
 
     async getEvents(eventName: string, fromBlock: number = 0): Promise<EventLog[]>
     {
-        const description = `${eventName} events from block ${fromBlock} and contract address ${this.contract._address}`;
+        const description = `${eventName} events from block ${fromBlock} and contract address ${this.contract.address}`;
 
         const options = {
             fromBlock: fromBlock
@@ -285,7 +252,7 @@ export default class Token
         {
             logger.debug(`About to get ${description}`);
 
-            const events = await this.contract.getPastEvents(eventName, options);
+            const events = await this.web3Contract.getPastEvents(eventName, options);
 
             logger.debug(`${events.length} events successfully returned from ${description}`);
 
@@ -301,7 +268,7 @@ export default class Token
 
     async getHolderBalances(): Promise<HolderBalances>
     {
-        const description = `all token holder balances from contract address ${this.contract._address}`;
+        const description = `all token holder balances from contract address ${this.contract.address}`;
 
         try {
             const transferEvents = await this.getEvents("Transfer");
@@ -348,5 +315,24 @@ export default class Token
             console.log(error.stack);
             throw error;
         }
+    }
+
+    async processTransaction(hash: string, description: string, gas: number): Promise<TransactionReceipt>
+    {
+        // wait for the transaction to be mined
+        const minedTransaction = await this.provider.waitForTransaction(hash);
+
+        logger.debug(`${hash} mined in block number ${minedTransaction.blockNumber} for ${description}`);
+
+        const transactionReceipt = await this.provider.getTransactionReceipt(hash);
+
+        logger.debug(`Status ${transactionReceipt.status} and ${transactionReceipt.gasUsed} gas of ${gas} used for ${description}`);
+
+        // If a status of 0 was returned then the transaction failed. Status 1 means the transaction worked
+        if (transactionReceipt.status.eq(0)) {
+            throw VError(`Failed ${hash} transaction with status code ${transactionReceipt.status} and ${gas} gas used.`);
+        }
+
+        return transactionReceipt;
     }
 }

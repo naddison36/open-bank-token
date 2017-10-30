@@ -1,6 +1,6 @@
 // Open Zeppelin's Safe Maths library copied from https://github.com/OpenZeppelin/zeppelin-solidity/blob/master/contracts/math/SafeMath.sol
 
-pragma solidity ^0.4.15;
+pragma solidity ^0.4.18;
 
 /**
  * @title SafeMath

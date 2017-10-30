@@ -25,9 +25,12 @@
   "license": "MIT",
   "homepage": "https://github.com/naddison36/open-bank-token#readme",
   "dependencies": {
+    "bignumber.js": "^4.1.0",
+    "bn.js": "^4.11.8",
     "commander": "^2.11.0",
     "config": "^1.26.2",
     "config-logger": "git://github.com/naddison36/logger.git#v0.0.4",
+    "ethers": "^2.1.2",
     "js-yaml": "^3.9.1",
     "verror": "^1.10.0",
     "web3": "1.0.0-beta.24"

@@ -22,7 +22,7 @@ contract RestrictedBankToken is ERC20Token
 {
     using SafeMath for uint256;
 
-    uint8 public decimals = 2;
+    //uint8 public decimals = 0;
     address public owner = msg.sender;
     address public newOwner;
 
