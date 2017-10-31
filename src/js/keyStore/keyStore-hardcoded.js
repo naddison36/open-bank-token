@@ -1,18 +1,7 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-const ethers_1 = require("ethers");
 const VError = require("verror");
-const logger = require("config-logger");
-class EthSigner {
-    async signTransaction(tx) {
-        const privateKey = await this.getPrivateKey(tx.from);
-        const wallet = new ethers_1.Wallet(privateKey);
-        logger.debug(`created wallet from private key for address ${wallet.address}`);
-        //TODO check wallet address matches transaction from address
-        const signedTx = wallet.sign(tx);
-        logger.debug(`Signed transaction for ${JSON.stringify(tx)} was:\n${signedTx}`);
-        return signedTx;
-    }
+class KeyStore {
     getPrivateKey(fromAddress) {
         return new Promise(async (resolve, reject) => {
             if (fromAddress == '0xF55583FF8461DB9dfbBe90b5F3324f2A290c3356') {
@@ -34,5 +23,5 @@ class EthSigner {
         });
     }
 }
-exports.default = EthSigner;
-//# sourceMappingURL=ethSigner-hardcoded.js.map
+exports.default = KeyStore;
+//# sourceMappingURL=keyStore-hardcoded.js.map

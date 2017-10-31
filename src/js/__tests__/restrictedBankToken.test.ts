@@ -1,8 +1,9 @@
 import * as fs from 'fs';
 import * as BN from 'bn.js';
+import {providers as Providers} from 'ethers';
 
 import RestrictedBankToken from '../BankToken';
-import EthSigner from '../ethSigner/ethSigner-hardcoded';
+import KeyStore from '../keyStore/keyStore-hardcoded';
 
 const testContractOwner = '0xF55583FF8461DB9dfbBe90b5F3324f2A290c3356',
     depositor1 = '0x8Ae386892b59bD2A7546a9468E8e847D61955991',
@@ -18,20 +19,18 @@ describe("BankToken", ()=>
     const jsonInterface = JSON.parse(defaultJsonInterfaceStr);
     const contractBinary = '0x' + fs.readFileSync(bankTokenBinaryFile, 'utf8');
 
-    //const url = "ws://localhost:8647";    // Testchain websocket
-    const url = "http://localhost:8646";      // Testchain http
-    //const url = "ws://localhost:8546";  // Dev websocket
-    //const url = "http://localhost:8545";  // Dev http
+    const transactionsProvider = new Providers.JsonRpcProvider("http://localhost:8646", true, 100);  // ChainId 100 = 0x64
+    const eventsProvider = new Providers.JsonRpcProvider("http://localhost:8646", true, 100);  // ChainId 100 = 0x64
 
-    const bankToken = new RestrictedBankToken(url,
+    const bankToken = new RestrictedBankToken(transactionsProvider, eventsProvider,
         testContractOwner,
-        new EthSigner(),
+        new KeyStore(),
         jsonInterface,
         contractBinary,
-        null   // test web3Contract
+        null   // contract address
     );
 
-    describe("Deploy web3Contract", ()=>
+    describe("Deploy contract", ()=>
     {
         test('with default arguments', async () =>
         {
@@ -213,13 +212,15 @@ describe("BankToken", ()=>
             expect(await bankToken.getBalanceOf(depositor1)).toMatchObject(new BN(110));
         }, 40000);
 
-        test("to first token holder but not as the web3Contract owner", async ()=>
+        test("to first token holder but not as the contract owner", async ()=>
         {
             expect.assertions(3);
 
-            const differentOwnerBankToken = new RestrictedBankToken(url,
-                depositor1,
-                new EthSigner(),
+            const differentOwnerBankToken = new RestrictedBankToken(
+                transactionsProvider,
+                eventsProvider,
+                depositor1, // different contract owner
+                new KeyStore(),
                 jsonInterface,
                 contractBinary,
                 bankToken.contractOwner

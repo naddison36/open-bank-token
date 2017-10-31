@@ -1,17 +1,19 @@
+import {provider as Provider} from 'ethers';
 import * as VError from 'verror';
 import * as logger from 'config-logger';
 import {Wallet, Contract} from 'ethers';
 
 import Token from './token';
 
-import {EthSigner} from './ethSigner/index.d';
+import {KeyStore} from './keyStore/index.d';
 
 export default class BankToken extends Token
 {
-    constructor(readonly url: string, contractOwner: string, readonly ethSigner: EthSigner,
+    constructor(readonly transactionsProvider: Provider, readonly eventsProvider: Provider,
+                contractOwner: string, readonly keyStore: KeyStore,
                 jsonInterface?: {}, contractBinary?: string, contractAddress?: string)
     {
-        super(url, contractOwner, ethSigner, jsonInterface, contractBinary, contractAddress);
+        super(transactionsProvider, eventsProvider, contractOwner, keyStore, jsonInterface, contractBinary, contractAddress);
     }
 
     // deploy a new web3Contract
@@ -69,7 +71,7 @@ export default class BankToken extends Token
         {
             try
             {
-                const privateKey = await self.ethSigner.getPrivateKey(tokenHolderAddress);
+                const privateKey = await self.keyStore.getPrivateKey(tokenHolderAddress);
                 const wallet = new Wallet(privateKey, self.transactionsProvider);
 
                 const contract = new Contract(self.contract.address, self.jsonInterface, wallet);

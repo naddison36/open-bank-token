@@ -1,12 +1,10 @@
 import {Wallet, Contract,
-    providers as Providers,
     provider as Provider} from 'ethers';
 import * as BN from 'bn.js';
 import * as logger from 'config-logger';
 import * as VError from 'verror';
 
-import {TransactionReceipt} from 'web3/types.d';
-import {EthSigner} from './ethSigner/index.d';
+import {KeyStore} from './keyStore/index.d';
 
 declare type HolderBalances = {
     [holderAddress: string] : number
@@ -14,9 +12,6 @@ declare type HolderBalances = {
 
 export default class Token
 {
-    readonly transactionsProvider: Provider;
-    readonly eventsProvider: Provider;
-
     contract: object;
     contractOwner: string;
     contractBinary: string;
@@ -26,18 +21,12 @@ export default class Token
 
     transactions: { [transactionHash: string] : number; } = {};
 
-    constructor(readonly url: string, contractOwner: string, readonly ethSigner: EthSigner,
+    constructor(readonly transactionsProvider: Provider, readonly eventsProvider: Provider,
+                contractOwner: string, readonly keyStore: KeyStore,
                 readonly jsonInterface: {}, binary?: string, contractAddress?: string)
     {
         this.contractOwner = contractOwner;
         this.contractBinary = binary;
-
-        const description = `connect to Ethereum node using url ${url}`;
-
-        logger.debug(`About to ${description}`);
-
-        this.transactionsProvider = new Providers.JsonRpcProvider(url, true, 100);  // ChainId 100 = 0x64
-        this.eventsProvider = new Providers.JsonRpcProvider(url, true, 100);  // ChainId 100 = 0x64
 
         this.contract = new Contract(contractAddress, jsonInterface, this.transactionsProvider);
     }
@@ -64,7 +53,7 @@ export default class Token
             {
                 const deployTransaction = Contract.getDeployTransaction(self.contractBinary, self.jsonInterface, symbol, tokenName);
 
-                const wallet = new Wallet(await self.ethSigner.getPrivateKey(contractOwner), self.transactionsProvider);
+                const wallet = new Wallet(await self.keyStore.getPrivateKey(contractOwner), self.transactionsProvider);
 
                 // Send the transaction
                 const broadcastTransaction = await wallet.sendTransaction(deployTransaction);
@@ -103,7 +92,7 @@ export default class Token
         {
             try
             {
-                const privateKey = await self.ethSigner.getPrivateKey(fromAddress);
+                const privateKey = await self.keyStore.getPrivateKey(fromAddress);
                 const wallet = new Wallet(privateKey, self.transactionsProvider);
 
                 const contract = new Contract(self.contract.address, self.jsonInterface, wallet);
@@ -247,7 +236,7 @@ export default class Token
             const Event = this.contract.interface.events[eventName]();
             //const Event = this.contract.interface.events.Transfer();
 
-            const logs = await this.transactionsProvider.getLogs({
+            const logs = await this.eventsProvider.getLogs({
                 fromBlock: fromBlock,
                 toBlock: "latest",
                 address: this.contract.address,
@@ -325,7 +314,7 @@ export default class Token
         }
     }
 
-    async processTransaction(hash: string, description: string, gasLimit: number): Promise<TransactionReceipt>
+    async processTransaction(hash: string, description: string, gasLimit: number): Promise<object>
     {
         // wait for the transaction to be mined
         const minedTransaction = await this.transactionsProvider.waitForTransaction(hash);

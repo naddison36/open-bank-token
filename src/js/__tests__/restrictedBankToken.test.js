@@ -2,21 +2,20 @@
 Object.defineProperty(exports, "__esModule", { value: true });
 const fs = require("fs");
 const BN = require("bn.js");
+const ethers_1 = require("ethers");
 const BankToken_1 = require("../BankToken");
-const ethSigner_hardcoded_1 = require("../ethSigner/ethSigner-hardcoded");
+const keyStore_hardcoded_1 = require("../keyStore/keyStore-hardcoded");
 const testContractOwner = '0xF55583FF8461DB9dfbBe90b5F3324f2A290c3356', depositor1 = '0x8Ae386892b59bD2A7546a9468E8e847D61955991', depositor2 = '0x0013a861865d784d97c57e70814b13ba94713d4e', depositor3 = '0xD9D72D466637e8408BB3B17d3ff6DB02e8BeBf27';
 const bankTokenABIFile = './bin/contracts/RestrictedBankToken.abi', bankTokenBinaryFile = './bin/contracts/RestrictedBankToken.bin';
 describe("BankToken", () => {
     const defaultJsonInterfaceStr = fs.readFileSync(bankTokenABIFile, 'utf8');
     const jsonInterface = JSON.parse(defaultJsonInterfaceStr);
     const contractBinary = '0x' + fs.readFileSync(bankTokenBinaryFile, 'utf8');
-    //const url = "ws://localhost:8647";    // Testchain websocket
-    const url = "http://localhost:8646"; // Testchain http
-    //const url = "ws://localhost:8546";  // Dev websocket
-    //const url = "http://localhost:8545";  // Dev http
-    const bankToken = new BankToken_1.default(url, testContractOwner, new ethSigner_hardcoded_1.default(), jsonInterface, contractBinary, null // test web3Contract
+    const transactionsProvider = new ethers_1.providers.JsonRpcProvider("http://localhost:8646", true, 100); // ChainId 100 = 0x64
+    const eventsProvider = new ethers_1.providers.JsonRpcProvider("http://localhost:8646", true, 100); // ChainId 100 = 0x64
+    const bankToken = new BankToken_1.default(transactionsProvider, eventsProvider, testContractOwner, new keyStore_hardcoded_1.default(), jsonInterface, contractBinary, null // contract address
     );
-    describe("Deploy web3Contract", () => {
+    describe("Deploy contract", () => {
         test('with default arguments', async () => {
             expect.assertions(5);
             const contractAddress = await bankToken.deployContract(testContractOwner);
@@ -136,9 +135,10 @@ describe("BankToken", () => {
             expect(await bankToken.getTotalSupply()).toMatchObject(new BN(310));
             expect(await bankToken.getBalanceOf(depositor1)).toMatchObject(new BN(110));
         }, 40000);
-        test("to first token holder but not as the web3Contract owner", async () => {
+        test("to first token holder but not as the contract owner", async () => {
             expect.assertions(3);
-            const differentOwnerBankToken = new BankToken_1.default(url, depositor1, new ethSigner_hardcoded_1.default(), jsonInterface, contractBinary, bankToken.contractOwner);
+            const differentOwnerBankToken = new BankToken_1.default(transactionsProvider, eventsProvider, depositor1, // different contract owner
+            new keyStore_hardcoded_1.default(), jsonInterface, contractBinary, bankToken.contractOwner);
             try {
                 await differentOwnerBankToken.deposit(depositor1, 30, '111', '10004');
             }

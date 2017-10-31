@@ -5,10 +5,11 @@ const logger = require("config-logger");
 const ethers_1 = require("ethers");
 const token_1 = require("./token");
 class BankToken extends token_1.default {
-    constructor(url, contractOwner, ethSigner, jsonInterface, contractBinary, contractAddress) {
-        super(url, contractOwner, ethSigner, jsonInterface, contractBinary, contractAddress);
-        this.url = url;
-        this.ethSigner = ethSigner;
+    constructor(transactionsProvider, eventsProvider, contractOwner, keyStore, jsonInterface, contractBinary, contractAddress) {
+        super(transactionsProvider, eventsProvider, contractOwner, keyStore, jsonInterface, contractBinary, contractAddress);
+        this.transactionsProvider = transactionsProvider;
+        this.eventsProvider = eventsProvider;
+        this.keyStore = keyStore;
     }
     // deploy a new web3Contract
     deployContract(contractOwner, symbol = "DAD", tokenName = "Digital Australian Dollar", gas = 1900000, gasPrice = 4000000000) {
@@ -46,7 +47,7 @@ class BankToken extends token_1.default {
         const description = `request withdraw of ${amount} tokens from contract ${this.contract.address} and token holder ${tokenHolderAddress}`;
         return new Promise(async (resolve, reject) => {
             try {
-                const privateKey = await self.ethSigner.getPrivateKey(tokenHolderAddress);
+                const privateKey = await self.keyStore.getPrivateKey(tokenHolderAddress);
                 const wallet = new ethers_1.Wallet(privateKey, self.transactionsProvider);
                 const contract = new ethers_1.Contract(self.contract.address, self.jsonInterface, wallet);
                 // send the transaction

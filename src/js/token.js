@@ -4,19 +4,16 @@ const ethers_1 = require("ethers");
 const logger = require("config-logger");
 const VError = require("verror");
 class Token {
-    constructor(url, contractOwner, ethSigner, jsonInterface, binary, contractAddress) {
-        this.url = url;
-        this.ethSigner = ethSigner;
+    constructor(transactionsProvider, eventsProvider, contractOwner, keyStore, jsonInterface, binary, contractAddress) {
+        this.transactionsProvider = transactionsProvider;
+        this.eventsProvider = eventsProvider;
+        this.keyStore = keyStore;
         this.jsonInterface = jsonInterface;
         this.defaultGas = 120000;
         this.defaultGasPrice = 2000000000;
         this.transactions = {};
         this.contractOwner = contractOwner;
         this.contractBinary = binary;
-        const description = `connect to Ethereum node using url ${url}`;
-        logger.debug(`About to ${description}`);
-        this.transactionsProvider = new ethers_1.providers.JsonRpcProvider(url, true, 100); // ChainId 100 = 0x64
-        this.eventsProvider = new ethers_1.providers.JsonRpcProvider(url, true, 100); // ChainId 100 = 0x64
         this.contract = new ethers_1.Contract(contractAddress, jsonInterface, this.transactionsProvider);
     }
     // deploy a new contract
@@ -33,7 +30,7 @@ class Token {
             }
             try {
                 const deployTransaction = ethers_1.Contract.getDeployTransaction(self.contractBinary, self.jsonInterface, symbol, tokenName);
-                const wallet = new ethers_1.Wallet(await self.ethSigner.getPrivateKey(contractOwner), self.transactionsProvider);
+                const wallet = new ethers_1.Wallet(await self.keyStore.getPrivateKey(contractOwner), self.transactionsProvider);
                 // Send the transaction
                 const broadcastTransaction = await wallet.sendTransaction(deployTransaction);
                 logger.debug(`${broadcastTransaction.hash} is transaction hash for ${description}`);
@@ -58,7 +55,7 @@ class Token {
         const description = `transfer ${amount} tokens from address ${fromAddress}, to address ${toAddress}, contract ${this.contract.address}, gas limit ${gas} and gas price ${gasPrice}`;
         return new Promise(async (resolve, reject) => {
             try {
-                const privateKey = await self.ethSigner.getPrivateKey(fromAddress);
+                const privateKey = await self.keyStore.getPrivateKey(fromAddress);
                 const wallet = new ethers_1.Wallet(privateKey, self.transactionsProvider);
                 const contract = new ethers_1.Contract(self.contract.address, self.jsonInterface, wallet);
                 // send the transaction
@@ -159,7 +156,7 @@ class Token {
             }
             const Event = this.contract.interface.events[eventName]();
             //const Event = this.contract.interface.events.Transfer();
-            const logs = await this.transactionsProvider.getLogs({
+            const logs = await this.eventsProvider.getLogs({
                 fromBlock: fromBlock,
                 toBlock: "latest",
                 address: this.contract.address,
