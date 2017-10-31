@@ -12,24 +12,24 @@ class BankToken extends token_1.default {
         this.keyStore = keyStore;
     }
     // deploy a new web3Contract
-    deployContract(contractOwner, symbol = "DAD", tokenName = "Digital Australian Dollar", gas = 1900000, gasPrice = 4000000000) {
-        return super.deployContract(contractOwner, symbol, tokenName, gas, gasPrice);
+    deployContract(contractOwner, symbol = "DAD", tokenName = "Digital Australian Dollar", gasLimit = 1900000, gasPrice = 4000000000) {
+        return super.deployContract(contractOwner, symbol, tokenName, gasLimit, gasPrice);
     }
     // deposit an amount of tokens to an address
-    deposit(toAddress, amount, externalId, bankTransactionId, _gas, _gasPrice) {
+    deposit(toAddress, amount, externalId, bankTransactionId, _gasLimit, _gasPrice) {
         const self = this;
-        const gas = _gas || self.defaultGas;
+        const gasLimit = _gasLimit || self.defaultGas;
         const gasPrice = _gasPrice || self.defaultGasPrice;
-        const description = `deposit ${amount} tokens to address ${toAddress}, from sender address ${self.contractOwner}, contract ${this.contract.address}, external id ${externalId}, bank transaction id ${bankTransactionId}, gas limit ${gas} (0x${gas.toString(16)}) and gas price ${gasPrice} (0x${gasPrice.toString(16)})`;
+        const description = `deposit ${amount} tokens to address ${toAddress}, from sender address ${self.contractOwner}, contract ${this.contract.address}, external id ${externalId}, bank transaction id ${bankTransactionId}, gas limit ${gasLimit} (0x${gasLimit.toString(16)}) and gas price ${gasPrice} (0x${gasPrice.toString(16)})`;
         return new Promise(async (resolve, reject) => {
             try {
                 // send the transaction
                 const broadcastTransaction = await self.contract.deposit(toAddress, amount, externalId, bankTransactionId, {
                     gasPrice: gasPrice,
-                    gasLimit: gas
+                    gasLimit: gasLimit
                 });
                 logger.debug(`${broadcastTransaction.hash} is transaction hash and nonce ${broadcastTransaction.nonce} for ${description}`);
-                const transactionReceipt = await self.processTransaction(broadcastTransaction.hash, description, gas);
+                const transactionReceipt = await self.processTransaction(broadcastTransaction.hash, description, gasLimit);
                 resolve(transactionReceipt);
             }
             catch (err) {
@@ -40,9 +40,9 @@ class BankToken extends token_1.default {
         });
     }
     // a token holder requests the token issuer to send a bank payment for their redeemed tokens
-    requestWithdrawal(tokenHolderAddress, amount, _gas, _gasPrice) {
+    requestWithdrawal(tokenHolderAddress, amount, _gasLimit, _gasPrice) {
         const self = this;
-        const gas = _gas || self.defaultGas;
+        const gasLimit = _gasLimit || self.defaultGas;
         const gasPrice = _gasPrice || self.defaultGasPrice;
         const description = `request withdraw of ${amount} tokens from contract ${this.contract.address} and token holder ${tokenHolderAddress}`;
         return new Promise(async (resolve, reject) => {
@@ -53,10 +53,10 @@ class BankToken extends token_1.default {
                 // send the transaction
                 const broadcastTransaction = await contract.requestWithdrawal(amount, {
                     gasPrice: gasPrice,
-                    gasLimit: gas
+                    gasLimit: gasLimit
                 });
                 logger.debug(`${broadcastTransaction.hash} is transaction hash and nonce ${broadcastTransaction.nonce} for ${description}`);
-                const transactionReceipt = await self.processTransaction(broadcastTransaction.hash, description, gas);
+                const transactionReceipt = await self.processTransaction(broadcastTransaction.hash, description, gasLimit);
                 resolve(transactionReceipt);
             }
             catch (err) {
@@ -66,9 +66,9 @@ class BankToken extends token_1.default {
             }
         });
     }
-    confirmWithdraw(withdrawalNumber, _gas, _gasPrice) {
+    confirmWithdraw(withdrawalNumber, _gasLimit, _gasPrice) {
         const self = this;
-        const gas = _gas || self.defaultGas;
+        const gasLimit = _gasLimit || self.defaultGas;
         const gasPrice = _gasPrice || self.defaultGasPrice;
         const description = `confirm withdrawal number ${withdrawalNumber} against contract ${this.contract.address} using contract owner ${self.contractOwner}`;
         return new Promise(async (resolve, reject) => {
@@ -76,10 +76,10 @@ class BankToken extends token_1.default {
                 // send the transaction
                 const broadcastTransaction = await self.contract.confirmWithdraw(withdrawalNumber, {
                     gasPrice: gasPrice,
-                    gasLimit: gas
+                    gasLimit: gasLimit
                 });
                 logger.debug(`${broadcastTransaction.hash} is transaction hash and nonce ${broadcastTransaction.nonce} for ${description}`);
-                const transactionReceipt = await self.processTransaction(broadcastTransaction.hash, description, gas);
+                const transactionReceipt = await self.processTransaction(broadcastTransaction.hash, description, gasLimit);
                 resolve(transactionReceipt);
             }
             catch (err) {

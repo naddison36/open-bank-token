@@ -35,12 +35,12 @@ export default class Token
     }
 
     // deploy a new contract
-    deployContract(contractOwner: string, symbol: string, tokenName: string, gas = 1900000, gasPrice = 4000000000): Promise<TransactionReceipt>
+    deployContract(contractOwner: string, symbol: string, tokenName: string, gasLimit = 1900000, gasPrice = 4000000000): Promise<TransactionReceipt>
     {
         const self = this;
         this.contractOwner = contractOwner;
 
-        const description = `deploy token with symbol ${symbol}, name "${tokenName}" from sender address ${self.contractOwner}, gas ${gas} and gasPrice ${gasPrice}`;
+        const description = `deploy token with symbol ${symbol}, name "${tokenName}" from sender address ${self.contractOwner}, gas limit ${gasLimit} and gas price ${gasPrice}`;
 
         return new Promise<TransactionReceipt>(async (resolve, reject) =>
         {
@@ -54,16 +54,21 @@ export default class Token
 
             try
             {
-                const deployTransaction = Contract.getDeployTransaction(self.contractBinary, self.jsonInterface, symbol, tokenName);
+                const deployTransactionData = Contract.getDeployTransaction(self.contractBinary, self.jsonInterface, symbol, tokenName);
 
                 const wallet = new Wallet(await self.keyStore.getPrivateKey(contractOwner), self.transactionsProvider);
+
+                const deployTransaction = Object.assign(deployTransactionData, {
+                    gasPrice: gasPrice,
+                    gasLimit: gasLimit
+                });
 
                 // Send the transaction
                 const broadcastTransaction = await wallet.sendTransaction(deployTransaction);
 
                 logger.debug(`${broadcastTransaction.hash} is transaction hash for ${description}`);
 
-                const transactionReceipt = await self.processTransaction(broadcastTransaction.hash, description, gas);
+                const transactionReceipt = await self.processTransaction(broadcastTransaction.hash, description, gasLimit);
 
                 self.contract = new Contract(transactionReceipt.contractAddress, self.jsonInterface, wallet);
 
@@ -79,14 +84,14 @@ export default class Token
     }
 
     // transfer an amount of tokens from one address to another
-    transfer(fromAddress: string, toAddress: string, amount: number, _gas?: number, _gasPrice?: number): Promise<TransactionReceipt>
+    transfer(fromAddress: string, toAddress: string, amount: number, _gasLimit?: number, _gasPrice?: number): Promise<TransactionReceipt>
     {
         const self = this;
 
-        const gas = _gas || self.defaultGas;
+        const gasLimit = _gasLimit || self.defaultGas;
         const gasPrice = _gasPrice || self.defaultGasPrice;
 
-        const description = `transfer ${amount} tokens from address ${fromAddress}, to address ${toAddress}, contract ${this.contract.address}, gas limit ${gas} and gas price ${gasPrice}`;
+        const description = `transfer ${amount} tokens from address ${fromAddress}, to address ${toAddress}, contract ${this.contract.address}, gas limit ${gasLimit} and gas price ${gasPrice}`;
 
         return new Promise<TransactionReceipt>(async (resolve, reject) =>
         {
@@ -100,12 +105,12 @@ export default class Token
                 // send the transaction
                 const broadcastTransaction = await contract.transfer(toAddress, amount, {
                     gasPrice: gasPrice,
-                    gasLimit: gas
+                    gasLimit: gasLimit
                 });
 
                 logger.debug(`${broadcastTransaction.hash} is transaction hash and nonce ${broadcastTransaction.nonce} for ${description}`);
 
-                const transactionReceipt = await self.processTransaction(broadcastTransaction.hash, description, gas);
+                const transactionReceipt = await self.processTransaction(broadcastTransaction.hash, description, gasLimit);
 
                 resolve(transactionReceipt);
             }
