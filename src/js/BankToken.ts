@@ -24,12 +24,11 @@ export default class BankToken extends Token
     }
 
     // deposit an amount of tokens to an address
-    deposit(toAddress: string, amount: number, externalId: string, bankTransactionId: string, _gasLimit?: number, _gasPrice?: number): Promise<TransactionReceipt>
+    deposit(toAddress: string, amount: number, externalId: string, bankTransactionId: string,
+            gasLimit: number = this.defaultGasLimit,
+            gasPrice: number = this.defaultGasPrice): Promise<TransactionReceipt>
     {
         const self = this;
-
-        const gasLimit = _gasLimit || self.defaultGas;
-        const gasPrice = _gasPrice || self.defaultGasPrice;
 
         const description = `deposit ${amount} tokens to address ${toAddress}, from sender address ${self.contractOwner}, contract ${this.contract.address}, external id ${externalId}, bank transaction id ${bankTransactionId}, gas limit ${gasLimit} (0x${gasLimit.toString(16)}) and gas price ${gasPrice} (0x${gasPrice.toString(16)})`;
 
@@ -59,12 +58,11 @@ export default class BankToken extends Token
     }
 
     // a token holder requests the token issuer to send a bank payment for their redeemed tokens
-    requestWithdrawal(tokenHolderAddress: string, amount: number, _gasLimit?: number, _gasPrice?: number): Promise<TransactionReceipt>
+    requestWithdrawal(tokenHolderAddress: string, amount: number,
+                      gasLimit: number = this.defaultGasLimit,
+                      gasPrice: number = this.defaultGasPrice): Promise<TransactionReceipt>
     {
         const self = this;
-
-        const gasLimit = _gasLimit || self.defaultGas;
-        const gasPrice = _gasPrice || self.defaultGasPrice;
 
         const description = `request withdraw of ${amount} tokens from contract ${this.contract.address} and token holder ${tokenHolderAddress}`;
 
@@ -98,12 +96,11 @@ export default class BankToken extends Token
         });
     }
 
-    confirmWithdraw(withdrawalNumber: number, _gasLimit?: number, _gasPrice?: number): Promise<TransactionReceipt>
+    confirmWithdraw(withdrawalNumber: number,
+                    gasLimit: number = this.defaultGasLimit,
+                    gasPrice: number = this.defaultGasPrice): Promise<TransactionReceipt>
     {
         const self = this;
-
-        const gasLimit = _gasLimit || self.defaultGas;
-        const gasPrice = _gasPrice || self.defaultGasPrice;
 
         const description = `confirm withdrawal number ${withdrawalNumber} against contract ${this.contract.address} using contract owner ${self.contractOwner}`;
 

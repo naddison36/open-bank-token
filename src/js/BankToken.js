@@ -16,10 +16,8 @@ class BankToken extends token_1.default {
         return super.deployContract(contractOwner, symbol, tokenName, gasLimit, gasPrice);
     }
     // deposit an amount of tokens to an address
-    deposit(toAddress, amount, externalId, bankTransactionId, _gasLimit, _gasPrice) {
+    deposit(toAddress, amount, externalId, bankTransactionId, gasLimit = this.defaultGasLimit, gasPrice = this.defaultGasPrice) {
         const self = this;
-        const gasLimit = _gasLimit || self.defaultGas;
-        const gasPrice = _gasPrice || self.defaultGasPrice;
         const description = `deposit ${amount} tokens to address ${toAddress}, from sender address ${self.contractOwner}, contract ${this.contract.address}, external id ${externalId}, bank transaction id ${bankTransactionId}, gas limit ${gasLimit} (0x${gasLimit.toString(16)}) and gas price ${gasPrice} (0x${gasPrice.toString(16)})`;
         return new Promise(async (resolve, reject) => {
             try {
@@ -40,10 +38,8 @@ class BankToken extends token_1.default {
         });
     }
     // a token holder requests the token issuer to send a bank payment for their redeemed tokens
-    requestWithdrawal(tokenHolderAddress, amount, _gasLimit, _gasPrice) {
+    requestWithdrawal(tokenHolderAddress, amount, gasLimit = this.defaultGasLimit, gasPrice = this.defaultGasPrice) {
         const self = this;
-        const gasLimit = _gasLimit || self.defaultGas;
-        const gasPrice = _gasPrice || self.defaultGasPrice;
         const description = `request withdraw of ${amount} tokens from contract ${this.contract.address} and token holder ${tokenHolderAddress}`;
         return new Promise(async (resolve, reject) => {
             try {
@@ -66,10 +62,8 @@ class BankToken extends token_1.default {
             }
         });
     }
-    confirmWithdraw(withdrawalNumber, _gasLimit, _gasPrice) {
+    confirmWithdraw(withdrawalNumber, gasLimit = this.defaultGasLimit, gasPrice = this.defaultGasPrice) {
         const self = this;
-        const gasLimit = _gasLimit || self.defaultGas;
-        const gasPrice = _gasPrice || self.defaultGasPrice;
         const description = `confirm withdrawal number ${withdrawalNumber} against contract ${this.contract.address} using contract owner ${self.contractOwner}`;
         return new Promise(async (resolve, reject) => {
             try {

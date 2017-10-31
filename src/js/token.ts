@@ -19,7 +19,7 @@ export default class Token
     contractOwner: string;
     contractBinary: string;
 
-    defaultGas = 120000;
+    defaultGasLimit = 120000;
     defaultGasPrice = 2000000000;
 
     transactions: { [transactionHash: string] : number; } = {};
@@ -84,12 +84,11 @@ export default class Token
     }
 
     // transfer an amount of tokens from one address to another
-    transfer(fromAddress: string, toAddress: string, amount: number, _gasLimit?: number, _gasPrice?: number): Promise<TransactionReceipt>
+    transfer(fromAddress: string, toAddress: string, amount: number,
+             gasLimit: number = this.defaultGasLimit,
+             gasPrice: number = this.defaultGasPrice): Promise<TransactionReceipt>
     {
         const self = this;
-
-        const gasLimit = _gasLimit || self.defaultGas;
-        const gasPrice = _gasPrice || self.defaultGasPrice;
 
         const description = `transfer ${amount} tokens from address ${fromAddress}, to address ${toAddress}, contract ${this.contract.address}, gas limit ${gasLimit} and gas price ${gasPrice}`;
 

@@ -11,7 +11,7 @@ class Token {
         this.eventsProvider = eventsProvider;
         this.keyStore = keyStore;
         this.jsonInterface = jsonInterface;
-        this.defaultGas = 120000;
+        this.defaultGasLimit = 120000;
         this.defaultGasPrice = 2000000000;
         this.transactions = {};
         this.contractOwner = contractOwner;
@@ -52,10 +52,8 @@ class Token {
         });
     }
     // transfer an amount of tokens from one address to another
-    transfer(fromAddress, toAddress, amount, _gasLimit, _gasPrice) {
+    transfer(fromAddress, toAddress, amount, gasLimit = this.defaultGasLimit, gasPrice = this.defaultGasPrice) {
         const self = this;
-        const gasLimit = _gasLimit || self.defaultGas;
-        const gasPrice = _gasPrice || self.defaultGasPrice;
         const description = `transfer ${amount} tokens from address ${fromAddress}, to address ${toAddress}, contract ${this.contract.address}, gas limit ${gasLimit} and gas price ${gasPrice}`;
         return new Promise(async (resolve, reject) => {
             try {
