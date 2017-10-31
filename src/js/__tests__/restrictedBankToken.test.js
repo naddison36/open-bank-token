@@ -61,7 +61,7 @@ describe("BankToken", () => {
             const events = await bankToken.getEvents('Deposit', 0);
             expect(events).toHaveLength(1);
             expect(events[0].toAddress).toEqual(depositor1);
-            expect(events[0].amount._bn).toEqual(new BN(100));
+            expect(events[0].amount).toEqual(new BN(100));
             expect(events[0].externalId).toEqual('1111');
             expect(events[0].bankTransactionId).toEqual('10000');
         });
@@ -89,15 +89,15 @@ describe("BankToken", () => {
             const events = await bankToken.getEvents('Deposit', 0);
             expect(events).toHaveLength(3);
             expect(events[0].toAddress.toUpperCase()).toEqual(depositor1.toUpperCase());
-            expect(events[0].amount._bn).toEqual(new BN(100));
+            expect(events[0].amount).toEqual(new BN(100));
             expect(events[0].externalId).toEqual('1111');
             expect(events[0].bankTransactionId).toEqual('10000');
             expect(events[1].toAddress.toUpperCase()).toEqual(depositor2.toUpperCase());
-            expect(events[1].amount._bn).toEqual(new BN(200));
+            expect(events[1].amount).toEqual(new BN(200));
             expect(events[1].externalId).toEqual('2222');
             expect(events[1].bankTransactionId).toEqual('10001');
             expect(events[2].toAddress.toUpperCase()).toEqual(depositor1.toUpperCase());
-            expect(events[2].amount._bn).toEqual(new BN(10));
+            expect(events[2].amount).toEqual(new BN(10));
             expect(events[2].externalId).toEqual('1111');
             expect(events[2].bankTransactionId).toEqual('10003');
         });
@@ -205,7 +205,7 @@ describe("BankToken", () => {
             // the third event as the two deposits in the beforeAll function will also emit Transfer events
             expect(events[2].fromAddress.toUpperCase()).toEqual(depositor1.toUpperCase());
             expect(events[2].toAddress.toUpperCase()).toEqual(depositor2.toUpperCase());
-            expect(events[2].amount._bn).toMatchObject(new BN(12));
+            expect(events[2].amount).toMatchObject(new BN(12));
         }, 40000);
         test("13 tokens from second to first depositor", async () => {
             expect.assertions(3);
@@ -274,9 +274,9 @@ describe("BankToken", () => {
             expect.assertions(4);
             const events = await bankToken.getEvents("RequestWithdrawal");
             expect(events).toHaveLength(1);
-            expect(events[0].withdrawalNumber._bn).toMatchObject(new BN(1));
+            expect(events[0].withdrawalNumber).toMatchObject(new BN(1));
             expect(events[0].fromAddress.toUpperCase()).toEqual(depositor1.toUpperCase());
-            expect(events[0].amount._bn).toMatchObject(new BN(100));
+            expect(events[0].amount).toMatchObject(new BN(100));
         }, 40000);
         test("get token holder balances", async () => {
             expect.assertions(5);

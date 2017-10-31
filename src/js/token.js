@@ -3,6 +3,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 const ethers_1 = require("ethers");
 const logger = require("config-logger");
 const VError = require("verror");
+const utils_1 = require("./utils");
 class Token {
     constructor(transactionsProvider, eventsProvider, contractOwner, keyStore, jsonInterface, binary, contractAddress) {
         this.transactionsProvider = transactionsProvider;
@@ -155,7 +156,6 @@ class Token {
                 throw new VError(`event name ${eventName} does not exist on the contract interface`);
             }
             const Event = this.contract.interface.events[eventName]();
-            //const Event = this.contract.interface.events.Transfer();
             const logs = await this.eventsProvider.getLogs({
                 fromBlock: fromBlock,
                 toBlock: "latest",
@@ -165,8 +165,9 @@ class Token {
             const events = [];
             for (const log of logs) {
                 const event = Event.parse(log.topics, log.data);
-                // TODO convert any Ethers BigNumbers to BN
-                events.push(event);
+                // convert any Ethers.js BigNumber types to BN
+                const convertedEvent = utils_1.convertEthersBNs(event);
+                events.push(convertedEvent);
             }
             logger.debug(`${events.length} events successfully returned from ${description}`);
             return events;

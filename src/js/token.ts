@@ -4,6 +4,8 @@ import * as BN from 'bn.js';
 import * as logger from 'config-logger';
 import * as VError from 'verror';
 
+import {convertEthersBNs} from "./utils";
+
 import {KeyStore} from './keyStore/index.d';
 
 declare type HolderBalances = {
@@ -234,7 +236,6 @@ export default class Token
             }
 
             const Event = this.contract.interface.events[eventName]();
-            //const Event = this.contract.interface.events.Transfer();
 
             const logs = await this.eventsProvider.getLogs({
                 fromBlock: fromBlock,
@@ -248,8 +249,11 @@ export default class Token
             for (const log of logs)
             {
                 const event = Event.parse(log.topics, log.data);
-                // TODO convert any Ethers BigNumbers to BN
-                events.push(event);
+
+                // convert any Ethers.js BigNumber types to BN
+                const convertedEvent = convertEthersBNs(event);
+
+                events.push(convertedEvent);
             }
 
             logger.debug(`${events.length} events successfully returned from ${description}`);
