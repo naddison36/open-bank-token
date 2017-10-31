@@ -4,7 +4,7 @@ function convertEthersBNs(object) {
     const result = {};
     for (let key of Object.keys(object)) {
         const value = object[key];
-        if (typeof (value) == 'object' && value.hasOwnProperty("_bn")) {
+        if (typeof (value) == 'object' && value != null && value.hasOwnProperty("_bn")) {
             result[key] = value._bn;
         }
         else {

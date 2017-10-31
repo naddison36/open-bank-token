@@ -1,11 +1,12 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 const ethers_1 = require("ethers");
+const BN = require("bn.js");
 const logger = require("config-logger");
 const VError = require("verror");
 const utils_1 = require("./utils");
 class Token {
-    constructor(transactionsProvider, eventsProvider, contractOwner, keyStore, jsonInterface, binary, contractAddress) {
+    constructor(transactionsProvider, eventsProvider, contractOwner, keyStore, jsonInterface, contractBinary, contractAddress) {
         this.transactionsProvider = transactionsProvider;
         this.eventsProvider = eventsProvider;
         this.keyStore = keyStore;
@@ -14,7 +15,7 @@ class Token {
         this.defaultGasPrice = 2000000000;
         this.transactions = {};
         this.contractOwner = contractOwner;
-        this.contractBinary = binary;
+        this.contractBinary = contractBinary;
         this.contract = new ethers_1.Contract(contractAddress, jsonInterface, this.transactionsProvider);
     }
     // deploy a new contract
@@ -215,10 +216,11 @@ class Token {
         // wait for the transaction to be mined
         const minedTransaction = await this.transactionsProvider.waitForTransaction(hash);
         logger.debug(`${hash} mined in block number ${minedTransaction.blockNumber} for ${description}`);
-        const transactionReceipt = await this.transactionsProvider.getTransactionReceipt(hash);
+        const rawTransactionReceipt = await this.transactionsProvider.getTransactionReceipt(hash);
+        const transactionReceipt = utils_1.convertEthersBNs(rawTransactionReceipt);
         logger.debug(`Status ${transactionReceipt.status} and ${transactionReceipt.gasUsed} gas of ${gasLimit} used for ${description}`);
         // If a status of 0 was returned then the transaction failed. Status 1 means the transaction worked
-        if (transactionReceipt.status.eq(0)) {
+        if (transactionReceipt.status.eq(new BN(0))) {
             throw VError(`Failed ${hash} transaction with status code ${transactionReceipt.status} and ${gasLimit} gas used.`);
         }
         return transactionReceipt;

@@ -26,10 +26,10 @@ export default class Token
 
     constructor(readonly transactionsProvider: Provider, readonly eventsProvider: Provider,
                 contractOwner: string, readonly keyStore: KeyStore,
-                readonly jsonInterface: {}, binary?: string, contractAddress?: string)
+                readonly jsonInterface: {}, contractBinary?: string, contractAddress?: string)
     {
         this.contractOwner = contractOwner;
-        this.contractBinary = binary;
+        this.contractBinary = contractBinary;
 
         this.contract = new Contract(contractAddress, jsonInterface, this.transactionsProvider);
     }
@@ -323,12 +323,14 @@ export default class Token
 
         logger.debug(`${hash} mined in block number ${minedTransaction.blockNumber} for ${description}`);
 
-        const transactionReceipt: TransactionReceipt = await this.transactionsProvider.getTransactionReceipt(hash);
+        const rawTransactionReceipt: TransactionReceipt = await this.transactionsProvider.getTransactionReceipt(hash);
+
+        const transactionReceipt = convertEthersBNs(rawTransactionReceipt) as TransactionReceipt;
 
         logger.debug(`Status ${transactionReceipt.status} and ${transactionReceipt.gasUsed} gas of ${gasLimit} used for ${description}`);
 
         // If a status of 0 was returned then the transaction failed. Status 1 means the transaction worked
-        if (transactionReceipt.status.eq(0)) {
+        if (transactionReceipt.status.eq(new BN(0))) {
             throw VError(`Failed ${hash} transaction with status code ${transactionReceipt.status} and ${gasLimit} gas used.`);
         }
 
