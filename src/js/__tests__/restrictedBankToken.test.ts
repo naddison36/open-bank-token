@@ -1,5 +1,5 @@
 import * as fs from 'fs';
-import * as BigNumber from 'bn.js';
+import * as BN from 'bn.js';
 
 import RestrictedBankToken from '../BankToken';
 import EthSigner from '../ethSigner/ethSigner-hardcoded';
@@ -31,211 +31,211 @@ describe("BankToken", ()=>
         null   // test web3Contract
     );
 
-    // describe("Deploy web3Contract", ()=>
-    // {
-    //     test('with default arguments', async () =>
-    //     {
-    //         expect.assertions(5);
-    //
-    //         const contractAddress = await bankToken.deployContract(testContractOwner);
-    //
-    //         expect(contractAddress).toHaveLength(42);
-    //
-    //         expect(await bankToken.getSymbol()).toEqual('DAD');
-    //         expect(await bankToken.getName()).toEqual('Digital Australian Dollar');
-    //         expect(await bankToken.getTotalSupply()).toMatchObject(new BigNumber(0));
-    //         expect(await bankToken.getDecimals()).toEqual(0);
-    //
-    //     }, 60000);
-    //
-    //     test('with specified arguments', async () =>
-    //     {
-    //         expect.assertions(4);
-    //
-    //         const contractAddress = await bankToken.deployContract(testContractOwner, "Test", "Test name");
-    //
-    //         expect(contractAddress).toHaveLength(42);
-    //
-    //         expect(await bankToken.getSymbol()).toEqual('Test');
-    //         expect(await bankToken.getName()).toEqual('Test name');
-    //         expect(await bankToken.getDecimals()).toEqual(0);
-    //
-    //     }, 60000);
-    // });
-    //
-    // describe("deposit", async ()=>
-    // {
-    //     beforeAll(async()=>
-    //     {
-    //         await bankToken.deployContract(testContractOwner);
-    //     }, 30000);
-    //
-    //     test("checks before any deposits", async ()=>
-    //     {
-    //         expect.assertions(4);
-    //
-    //         expect(await bankToken.getTotalSupply()).toMatchObject(new BigNumber(0));
-    //         expect(await bankToken.getBalanceOf(depositor1)).toMatchObject(new BigNumber(0));
-    //         expect(await bankToken.getBalanceOf(depositor2)).toMatchObject(new BigNumber(0));
-    //
-    //         const events = await bankToken.getEvents('Deposit', 0);
-    //         expect(events).toHaveLength(0);
-    //     }, 30000);
-    //
-    //     test("to first token holder", async ()=>
-    //     {
-    //         expect.assertions(6);
-    //
-    //         expect(await bankToken.isTokenHolder(depositor1)).toEqual(false);
-    //
-    //         const hash = await bankToken.deposit(depositor1, 100, '1111', '10000');
-    //
-    //         expect(await bankToken.isTokenHolder(depositor1)).toEqual(true);
-    //
-    //         expect(hash).toHaveLength(66);
-    //         expect(await bankToken.getTotalSupply()).toMatchObject(new BigNumber(100));
-    //         expect(await bankToken.getBalanceOf(depositor1)).toMatchObject(new BigNumber(100));
-    //         expect(await bankToken.getBalanceOf(depositor2)).toMatchObject(new BigNumber(0));
-    //     }, 30000);
-    //
-    //     test("get event from first deposit", async ()=>
-    //     {
-    //         expect.assertions(5);
-    //
-    //         const events = await bankToken.getEvents('Deposit', 0);
-    //
-    //         expect(events).toHaveLength(1);
-    //         expect(events[0].returnValues.toAddress).toEqual(depositor1);
-    //         expect(events[0].returnValues.amount).toEqual("100");
-    //         expect(events[0].returnValues.externalId).toEqual('1111');
-    //         expect(events[0].returnValues.bankTransactionId).toEqual('10000');
-    //     });
-    //
-    //     test("to second token holder", async ()=>
-    //     {
-    //         expect.assertions(6);
-    //
-    //         expect(await bankToken.isTokenHolder(depositor2)).toEqual(false);
-    //
-    //         const hash = await bankToken.deposit(depositor2, 200, '2222', '10001');
-    //
-    //         expect(await bankToken.isTokenHolder(depositor2)).toEqual(true);
-    //
-    //         expect(hash).toHaveLength(66);
-    //         expect(await bankToken.getTotalSupply()).toMatchObject(new BigNumber(300));
-    //         expect(await bankToken.getBalanceOf(depositor1)).toMatchObject(new BigNumber(100));
-    //         expect(await bankToken.getBalanceOf(depositor2)).toMatchObject(new BigNumber(200));
-    //     }, 40000);
-    //
-    //     test("to first token holder again", async ()=>
-    //     {
-    //         expect.assertions(5);
-    //
-    //         expect(await bankToken.hasBankTransactionId('10003')).toEqual(false);
-    //
-    //         const hash = await bankToken.deposit(depositor1, 10, '1111', '10003');
-    //
-    //         expect(await bankToken.hasBankTransactionId('10003')).toEqual(true);
-    //
-    //         expect(hash).toHaveLength(66);
-    //         expect(await bankToken.getTotalSupply()).toMatchObject(new BigNumber(310));
-    //         expect(await bankToken.getBalanceOf(depositor1)).toMatchObject(new BigNumber(110));
-    //     }, 40000);
-    //
-    //     test("get events from three deposits", async ()=>
-    //     {
-    //         expect.assertions(13);
-    //
-    //         const events = await bankToken.getEvents('Deposit', 0);
-    //
-    //         expect(events).toHaveLength(3);
-    //
-    //         expect(events[0].returnValues.toAddress.toUpperCase()).toEqual(depositor1.toUpperCase());
-    //         expect(events[0].returnValues.amount).toEqual("100");
-    //         expect(events[0].returnValues.externalId).toEqual('1111');
-    //         expect(events[0].returnValues.bankTransactionId).toEqual('10000');
-    //
-    //         expect(events[1].returnValues.toAddress.toUpperCase()).toEqual(depositor2.toUpperCase());
-    //         expect(events[1].returnValues.amount).toEqual("200");
-    //         expect(events[1].returnValues.externalId).toEqual('2222');
-    //         expect(events[1].returnValues.bankTransactionId).toEqual('10001');
-    //
-    //         expect(events[2].returnValues.toAddress.toUpperCase()).toEqual(depositor1.toUpperCase());
-    //         expect(events[2].returnValues.amount).toEqual("10");
-    //         expect(events[2].returnValues.externalId).toEqual('1111');
-    //         expect(events[2].returnValues.bankTransactionId).toEqual('10003');
-    //     });
-    //
-    //     test("duplicate to first token holder again", async ()=>
-    //     {
-    //         expect.assertions(3);
-    //
-    //         try {
-    //             await bankToken.deposit(depositor1, 20, '11', '10003');
-    //         }
-    //         catch (err) {
-    //             expect(err instanceof Error).toBeTruthy();
-    //         }
-    //
-    //         expect(await bankToken.getTotalSupply()).toMatchObject(new BigNumber(310));
-    //         expect(await bankToken.getBalanceOf(depositor1)).toMatchObject(new BigNumber(110));
-    //     }, 40000);
-    //
-    //     test("to third token holder with > 1000 tokens", async ()=>
-    //     {
-    //         expect.assertions(3);
-    //
-    //         bankToken.contractOwner = testContractOwner;
-    //
-    //         try {
-    //             await bankToken.deposit(depositor3, 10001, '3333', '10010');
-    //         }
-    //         catch (err) {
-    //             expect(err instanceof Error).toBeTruthy();
-    //         }
-    //
-    //         expect(await bankToken.getTotalSupply()).toMatchObject(new BigNumber(310));
-    //         expect(await bankToken.getBalanceOf(depositor3)).toMatchObject(new BigNumber(0));
-    //     }, 40000);
-    //
-    //     test("to first token holder so they have more than 1000 tokens", async ()=>
-    //     {
-    //         expect.assertions(3);
-    //
-    //         try {
-    //             await bankToken.deposit(depositor1, 900, '1111', '10020');
-    //         }
-    //         catch (err) {
-    //             expect(err instanceof Error).toBeTruthy();
-    //         }
-    //
-    //         expect(await bankToken.getTotalSupply()).toMatchObject(new BigNumber(310));
-    //         expect(await bankToken.getBalanceOf(depositor1)).toMatchObject(new BigNumber(110));
-    //     }, 40000);
-    //
-    //     test("to first token holder but not as the web3Contract owner", async ()=>
-    //     {
-    //         expect.assertions(3);
-    //
-    //         const differentOwnerBankToken = new RestrictedBankToken(url,
-    //             depositor1,
-    //             new EthSigner(),
-    //             jsonInterface,
-    //             contractBinary,
-    //             bankToken.contractOwner
-    //         );
-    //
-    //         try {
-    //             await differentOwnerBankToken.deposit(depositor1, 30, '111', '10004');
-    //         }
-    //         catch (err) {
-    //             expect(err instanceof Error).toBeTruthy();
-    //         }
-    //
-    //         expect(await bankToken.getTotalSupply()).toMatchObject(new BigNumber(310));
-    //         expect(await bankToken.getBalanceOf(depositor1)).toMatchObject(new BigNumber(110));
-    //     }, 40000);
-    // });
+    describe("Deploy web3Contract", ()=>
+    {
+        test('with default arguments', async () =>
+        {
+            expect.assertions(5);
+
+            const contractAddress = await bankToken.deployContract(testContractOwner);
+
+            expect(contractAddress).toHaveLength(42);
+
+            expect(await bankToken.getSymbol()).toEqual('DAD');
+            expect(await bankToken.getName()).toEqual('Digital Australian Dollar');
+            expect(await bankToken.getTotalSupply()).toMatchObject(new BN(0));
+            expect(await bankToken.getDecimals()).toEqual(0);
+
+        }, 60000);
+
+        test('with specified arguments', async () =>
+        {
+            expect.assertions(4);
+
+            const contractAddress = await bankToken.deployContract(testContractOwner, "Test", "Test name");
+
+            expect(contractAddress).toHaveLength(42);
+
+            expect(await bankToken.getSymbol()).toEqual('Test');
+            expect(await bankToken.getName()).toEqual('Test name');
+            expect(await bankToken.getDecimals()).toEqual(0);
+
+        }, 60000);
+    });
+
+    describe("deposit", async ()=>
+    {
+        beforeAll(async()=>
+        {
+            await bankToken.deployContract(testContractOwner);
+        }, 30000);
+
+        test("checks before any deposits", async ()=>
+        {
+            expect.assertions(4);
+
+            expect(await bankToken.getTotalSupply()).toMatchObject(new BN(0));
+            expect(await bankToken.getBalanceOf(depositor1)).toMatchObject(new BN(0));
+            expect(await bankToken.getBalanceOf(depositor2)).toMatchObject(new BN(0));
+
+            const events = await bankToken.getEvents('Deposit', 0);
+            expect(events).toHaveLength(0);
+        }, 30000);
+
+        test("to first token holder", async ()=>
+        {
+            expect.assertions(6);
+
+            expect(await bankToken.isTokenHolder(depositor1)).toEqual(false);
+
+            const hash = await bankToken.deposit(depositor1, 100, '1111', '10000');
+
+            expect(await bankToken.isTokenHolder(depositor1)).toEqual(true);
+
+            expect(hash).toHaveLength(66);
+            expect(await bankToken.getTotalSupply()).toMatchObject(new BN(100));
+            expect(await bankToken.getBalanceOf(depositor1)).toMatchObject(new BN(100));
+            expect(await bankToken.getBalanceOf(depositor2)).toMatchObject(new BN(0));
+        }, 30000);
+
+        test("get event from first deposit", async ()=>
+        {
+            expect.assertions(5);
+
+            const events = await bankToken.getEvents('Deposit', 0);
+
+            expect(events).toHaveLength(1);
+            expect(events[0].toAddress).toEqual(depositor1);
+            expect(events[0].amount._bn).toEqual(new BN(100));
+            expect(events[0].externalId).toEqual('1111');
+            expect(events[0].bankTransactionId).toEqual('10000');
+        });
+
+        test("to second token holder", async ()=>
+        {
+            expect.assertions(6);
+
+            expect(await bankToken.isTokenHolder(depositor2)).toEqual(false);
+
+            const hash = await bankToken.deposit(depositor2, 200, '2222', '10001');
+
+            expect(await bankToken.isTokenHolder(depositor2)).toEqual(true);
+
+            expect(hash).toHaveLength(66);
+            expect(await bankToken.getTotalSupply()).toMatchObject(new BN(300));
+            expect(await bankToken.getBalanceOf(depositor1)).toMatchObject(new BN(100));
+            expect(await bankToken.getBalanceOf(depositor2)).toMatchObject(new BN(200));
+        }, 40000);
+
+        test("to first token holder again", async ()=>
+        {
+            expect.assertions(5);
+
+            expect(await bankToken.hasBankTransactionId('10003')).toEqual(false);
+
+            const hash = await bankToken.deposit(depositor1, 10, '1111', '10003');
+
+            expect(await bankToken.hasBankTransactionId('10003')).toEqual(true);
+
+            expect(hash).toHaveLength(66);
+            expect(await bankToken.getTotalSupply()).toMatchObject(new BN(310));
+            expect(await bankToken.getBalanceOf(depositor1)).toMatchObject(new BN(110));
+        }, 40000);
+
+        test("get events from three deposits", async ()=>
+        {
+            expect.assertions(13);
+
+            const events = await bankToken.getEvents('Deposit', 0);
+
+            expect(events).toHaveLength(3);
+
+            expect(events[0].toAddress.toUpperCase()).toEqual(depositor1.toUpperCase());
+            expect(events[0].amount._bn).toEqual(new BN(100));
+            expect(events[0].externalId).toEqual('1111');
+            expect(events[0].bankTransactionId).toEqual('10000');
+
+            expect(events[1].toAddress.toUpperCase()).toEqual(depositor2.toUpperCase());
+            expect(events[1].amount._bn).toEqual(new BN(200));
+            expect(events[1].externalId).toEqual('2222');
+            expect(events[1].bankTransactionId).toEqual('10001');
+
+            expect(events[2].toAddress.toUpperCase()).toEqual(depositor1.toUpperCase());
+            expect(events[2].amount._bn).toEqual(new BN(10));
+            expect(events[2].externalId).toEqual('1111');
+            expect(events[2].bankTransactionId).toEqual('10003');
+        });
+
+        test("duplicate to first token holder again", async ()=>
+        {
+            expect.assertions(3);
+
+            try {
+                await bankToken.deposit(depositor1, 20, '11', '10003');
+            }
+            catch (err) {
+                expect(err instanceof Error).toBeTruthy();
+            }
+
+            expect(await bankToken.getTotalSupply()).toMatchObject(new BN(310));
+            expect(await bankToken.getBalanceOf(depositor1)).toMatchObject(new BN(110));
+        }, 40000);
+
+        test("to third token holder with > 1000 tokens", async ()=>
+        {
+            expect.assertions(3);
+
+            bankToken.contractOwner = testContractOwner;
+
+            try {
+                await bankToken.deposit(depositor3, 10001, '3333', '10010');
+            }
+            catch (err) {
+                expect(err instanceof Error).toBeTruthy();
+            }
+
+            expect(await bankToken.getTotalSupply()).toMatchObject(new BN(310));
+            expect(await bankToken.getBalanceOf(depositor3)).toMatchObject(new BN(0));
+        }, 40000);
+
+        test("to first token holder so they have more than 1000 tokens", async ()=>
+        {
+            expect.assertions(3);
+
+            try {
+                await bankToken.deposit(depositor1, 900, '1111', '10020');
+            }
+            catch (err) {
+                expect(err instanceof Error).toBeTruthy();
+            }
+
+            expect(await bankToken.getTotalSupply()).toMatchObject(new BN(310));
+            expect(await bankToken.getBalanceOf(depositor1)).toMatchObject(new BN(110));
+        }, 40000);
+
+        test("to first token holder but not as the web3Contract owner", async ()=>
+        {
+            expect.assertions(3);
+
+            const differentOwnerBankToken = new RestrictedBankToken(url,
+                depositor1,
+                new EthSigner(),
+                jsonInterface,
+                contractBinary,
+                bankToken.contractOwner
+            );
+
+            try {
+                await differentOwnerBankToken.deposit(depositor1, 30, '111', '10004');
+            }
+            catch (err) {
+                expect(err instanceof Error).toBeTruthy();
+            }
+
+            expect(await bankToken.getTotalSupply()).toMatchObject(new BN(310));
+            expect(await bankToken.getBalanceOf(depositor1)).toMatchObject(new BN(110));
+        }, 40000);
+    });
 
     describe("transfers", ()=>
     {
@@ -257,9 +257,9 @@ describe("BankToken", ()=>
                 expect(err instanceof Error).toBeTruthy();
             }
 
-            expect(await bankToken.getBalanceOf(depositor1)).toMatchObject(new BigNumber(999));
-            expect(await bankToken.getBalanceOf(depositor2)).toMatchObject(new BigNumber(888));
-            expect(await bankToken.getBalanceOf(depositor3)).toMatchObject(new BigNumber(0));
+            expect(await bankToken.getBalanceOf(depositor1)).toMatchObject(new BN(999));
+            expect(await bankToken.getBalanceOf(depositor2)).toMatchObject(new BN(888));
+            expect(await bankToken.getBalanceOf(depositor3)).toMatchObject(new BN(0));
         }, 40000);
 
         test("from an address with no tokens", async ()=>
@@ -273,8 +273,8 @@ describe("BankToken", ()=>
                 expect(err instanceof Error).toBeTruthy();
             }
 
-            expect(await bankToken.getBalanceOf(depositor1)).toMatchObject(new BigNumber(999));
-            expect(await bankToken.getBalanceOf(depositor2)).toMatchObject(new BigNumber(888));
+            expect(await bankToken.getBalanceOf(depositor1)).toMatchObject(new BN(999));
+            expect(await bankToken.getBalanceOf(depositor2)).toMatchObject(new BN(888));
         }, 40000);
 
         test("from first to second depositor where the second depositor will have > 1000 tokens", async ()=>
@@ -288,8 +288,8 @@ describe("BankToken", ()=>
                 expect(err instanceof Error).toBeTruthy();
             }
 
-            expect(await bankToken.getBalanceOf(depositor1)).toMatchObject(new BigNumber(999));
-            expect(await bankToken.getBalanceOf(depositor2)).toMatchObject(new BigNumber(888));
+            expect(await bankToken.getBalanceOf(depositor1)).toMatchObject(new BN(999));
+            expect(await bankToken.getBalanceOf(depositor2)).toMatchObject(new BN(888));
         }, 40000);
 
         test("12 tokens from first to second depositor", async ()=>
@@ -300,9 +300,9 @@ describe("BankToken", ()=>
             expect(hash).toHaveLength(66);
 
             const depositor1Balance = await bankToken.getBalanceOf(depositor1);
-            expect(depositor1Balance.toString()).toEqual(new BigNumber(987).toString());
+            expect(depositor1Balance.toString()).toEqual(new BN(987).toString());
             const depositor2Balance = await bankToken.getBalanceOf(depositor2);
-            expect(depositor2Balance.toString()).toEqual(new BigNumber(900).toString());
+            expect(depositor2Balance.toString()).toEqual(new BN(900).toString());
         }, 40000);
 
         test("event from transfer", async()=>
@@ -313,9 +313,9 @@ describe("BankToken", ()=>
 
             expect(events).toHaveLength(3);
             // the third event as the two deposits in the beforeAll function will also emit Transfer events
-            expect(events[2].returnValues.fromAddress.toUpperCase()).toEqual(depositor1.toUpperCase());
-            expect(events[2].returnValues.toAddress.toUpperCase()).toEqual(depositor2.toUpperCase());
-            expect(events[2].returnValues.amount).toEqual("12");
+            expect(events[2].fromAddress.toUpperCase()).toEqual(depositor1.toUpperCase());
+            expect(events[2].toAddress.toUpperCase()).toEqual(depositor2.toUpperCase());
+            expect(events[2].amount._bn).toMatchObject(new BN(12));
         }, 40000);
 
         test("13 tokens from second to first depositor", async ()=>
@@ -325,8 +325,8 @@ describe("BankToken", ()=>
             const hash = await bankToken.transfer(depositor2, depositor1, 13);
 
             expect(hash).toHaveLength(66);
-            expect(await bankToken.getBalanceOf(depositor1)).toMatchObject(new BigNumber(1000));
-            expect(await bankToken.getBalanceOf(depositor2)).toMatchObject(new BigNumber(887));
+            expect(await bankToken.getBalanceOf(depositor1)).toMatchObject(new BN(1000));
+            expect(await bankToken.getBalanceOf(depositor2)).toMatchObject(new BN(887));
         }, 40000);
 
         test("0 tokens from first to second depositor", async ()=>
@@ -336,8 +336,8 @@ describe("BankToken", ()=>
             const hash = await bankToken.transfer(depositor1, depositor2, 0);
 
             expect(hash).toHaveLength(66);
-            expect(await bankToken.getBalanceOf(depositor1)).toMatchObject(new BigNumber(1000));
-            expect(await bankToken.getBalanceOf(depositor2)).toMatchObject(new BigNumber(887));
+            expect(await bankToken.getBalanceOf(depositor1)).toMatchObject(new BN(1000));
+            expect(await bankToken.getBalanceOf(depositor2)).toMatchObject(new BN(887));
         }, 40000);
     });
 
@@ -359,9 +359,9 @@ describe("BankToken", ()=>
         {
             expect.assertions(3);
 
-            expect(await bankToken.getBalanceOf(depositor1)).toMatchObject(new BigNumber(1000));
-            expect(await bankToken.getBalanceOf(depositor2)).toMatchObject(new BigNumber(1000));
-            expect(await bankToken.getTotalSupply()).toMatchObject(new BigNumber(2000));
+            expect(await bankToken.getBalanceOf(depositor1)).toMatchObject(new BN(1000));
+            expect(await bankToken.getBalanceOf(depositor2)).toMatchObject(new BN(1000));
+            expect(await bankToken.getTotalSupply()).toMatchObject(new BN(2000));
         }, 20000);
 
         test("request withdraw when no tokens", async ()=>
@@ -375,8 +375,8 @@ describe("BankToken", ()=>
                 expect(err instanceof Error).toBeTruthy();
             }
 
-            expect(await bankToken.getBalanceOf(depositor3)).toMatchObject(new BigNumber(0));
-            expect(await bankToken.getTotalSupply()).toMatchObject(new BigNumber(2000));
+            expect(await bankToken.getBalanceOf(depositor3)).toMatchObject(new BN(0));
+            expect(await bankToken.getTotalSupply()).toMatchObject(new BN(2000));
 
         }, 30000);
 
@@ -391,9 +391,9 @@ describe("BankToken", ()=>
                 expect(err instanceof Error).toBeTruthy();
             }
 
-            expect(await bankToken.getBalanceOf(depositor1)).toMatchObject(new BigNumber(1000));
-            expect(await bankToken.getBalanceOf(depositor2)).toMatchObject(new BigNumber(1000));
-            expect(await bankToken.getTotalSupply()).toMatchObject(new BigNumber(2000));
+            expect(await bankToken.getBalanceOf(depositor1)).toMatchObject(new BN(1000));
+            expect(await bankToken.getBalanceOf(depositor2)).toMatchObject(new BN(1000));
+            expect(await bankToken.getTotalSupply()).toMatchObject(new BN(2000));
         }, 30000);
 
         test("request withdraw from first depositor", async ()=>
@@ -403,9 +403,9 @@ describe("BankToken", ()=>
             const hash = await bankToken.requestWithdrawal(depositor1, 100);
 
             expect(hash).toHaveLength(66);
-            expect(await bankToken.getBalanceOf(depositor1)).toMatchObject(new BigNumber(900));
-            expect(await bankToken.getBalanceOf(depositor2)).toMatchObject(new BigNumber(1000));
-            expect(await bankToken.getTotalSupply()).toMatchObject(new BigNumber(1900));
+            expect(await bankToken.getBalanceOf(depositor1)).toMatchObject(new BN(900));
+            expect(await bankToken.getBalanceOf(depositor2)).toMatchObject(new BN(1000));
+            expect(await bankToken.getTotalSupply()).toMatchObject(new BN(1900));
         }, 30000);
 
         test("event from request withdrawal", async()=>
@@ -415,9 +415,9 @@ describe("BankToken", ()=>
             const events = await bankToken.getEvents("RequestWithdrawal");
 
             expect(events).toHaveLength(1);
-            expect(events[0].returnValues.withdrawalNumber).toEqual("1");
-            expect(events[0].returnValues.fromAddress.toUpperCase()).toEqual(depositor1.toUpperCase());
-            expect(events[0].returnValues.amount).toEqual("100");
+            expect(events[0].withdrawalNumber._bn).toMatchObject(new BN(1));
+            expect(events[0].fromAddress.toUpperCase()).toEqual(depositor1.toUpperCase());
+            expect(events[0].amount._bn).toMatchObject(new BN(100));
         }, 40000);
 
         test("get token holder balances", async()=>
@@ -450,10 +450,10 @@ describe("BankToken", ()=>
             const withdrawalHash = await bankToken.requestWithdrawal(depositor1, 100);
 
             expect(withdrawalHash).toHaveLength(66);
-            expect(await bankToken.getBalanceOf(depositor1)).toMatchObject(new BigNumber(701));
-            expect(await bankToken.getBalanceOf(depositor2)).toMatchObject(new BigNumber(1000));
-            expect(await bankToken.getBalanceOf(depositor3)).toMatchObject(new BigNumber(99));
-            expect(await bankToken.getTotalSupply()).toMatchObject(new BigNumber(1800));
+            expect(await bankToken.getBalanceOf(depositor1)).toMatchObject(new BN(701));
+            expect(await bankToken.getBalanceOf(depositor2)).toMatchObject(new BN(1000));
+            expect(await bankToken.getBalanceOf(depositor3)).toMatchObject(new BN(99));
+            expect(await bankToken.getTotalSupply()).toMatchObject(new BN(1800));
         }, 60000);
 
         test("get token holder balances after transfer and withdrawal", async()=>

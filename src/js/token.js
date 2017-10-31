@@ -1,6 +1,5 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-const Web3 = require("web3");
 const ethers_1 = require("ethers");
 const logger = require("config-logger");
 const VError = require("verror");
@@ -16,15 +15,11 @@ class Token {
         this.contractBinary = binary;
         const description = `connect to Ethereum node using url ${url}`;
         logger.debug(`About to ${description}`);
-        this.web3 = new Web3(url);
-        this.provider = new ethers_1.providers.JsonRpcProvider(url, true, 100); // ChainId 100 = 0x64
-        this.web3Contract = new this.web3.eth.Contract(jsonInterface, contractAddress, {
-            from: contractOwner
-        });
-        this.contract = new ethers_1.Contract(contractAddress, jsonInterface, this.provider);
-        this.ethSigner = ethSigner;
+        this.transactionsProvider = new ethers_1.providers.JsonRpcProvider(url, true, 100); // ChainId 100 = 0x64
+        this.eventsProvider = new ethers_1.providers.JsonRpcProvider(url, true, 100); // ChainId 100 = 0x64
+        this.contract = new ethers_1.Contract(contractAddress, jsonInterface, this.transactionsProvider);
     }
-    // deploy a new web3Contract
+    // deploy a new contract
     deployContract(contractOwner, symbol, tokenName, gas = 1900000, gasPrice = 4000000000) {
         const self = this;
         this.contractOwner = contractOwner;
@@ -38,15 +33,13 @@ class Token {
             }
             try {
                 const deployTransaction = ethers_1.Contract.getDeployTransaction(self.contractBinary, self.jsonInterface, symbol, tokenName);
-                const wallet = new ethers_1.Wallet(await self.ethSigner.getPrivateKey(contractOwner), self.provider);
+                const wallet = new ethers_1.Wallet(await self.ethSigner.getPrivateKey(contractOwner), self.transactionsProvider);
                 // Send the transaction
                 const broadcastTransaction = await wallet.sendTransaction(deployTransaction);
                 logger.debug(`${broadcastTransaction.hash} is transaction hash for ${description}`);
                 // wait for the transaction to be mined
-                const minedTransaction = await self.provider.waitForTransaction(broadcastTransaction.hash);
-                logger.debug(`Created contract with address ${minedTransaction.creates} using ? gas for ${description}`);
-                // TODO once all is switched to Ethers then the following can be removed
-                self.web3Contract.options.address = minedTransaction.creates;
+                const minedTransaction = await self.transactionsProvider.waitForTransaction(broadcastTransaction.hash);
+                logger.debug(`Created contract with address ${minedTransaction.creates} for ${description}`);
                 self.contract = new ethers_1.Contract(minedTransaction.creates, self.jsonInterface, wallet);
                 resolve(minedTransaction.creates);
             }
@@ -62,11 +55,11 @@ class Token {
         const self = this;
         const gas = _gas || self.defaultGas;
         const gasPrice = _gasPrice || self.defaultGasPrice;
-        const description = `transfer ${amount} tokens from address ${fromAddress}, to address ${toAddress}, contract ${this.web3Contract._address}, gas limit ${gas} and gas price ${gasPrice}`;
+        const description = `transfer ${amount} tokens from address ${fromAddress}, to address ${toAddress}, contract ${this.contract.address}, gas limit ${gas} and gas price ${gasPrice}`;
         return new Promise(async (resolve, reject) => {
             try {
                 const privateKey = await self.ethSigner.getPrivateKey(fromAddress);
-                const wallet = new ethers_1.Wallet(privateKey, self.provider);
+                const wallet = new ethers_1.Wallet(privateKey, self.transactionsProvider);
                 const contract = new ethers_1.Contract(self.contract.address, self.jsonInterface, wallet);
                 // send the transaction
                 const broadcastTransaction = await contract.transfer(toAddress, amount, {
@@ -161,7 +154,23 @@ class Token {
         };
         try {
             logger.debug(`About to get ${description}`);
-            const events = await this.web3Contract.getPastEvents(eventName, options);
+            if (!this.contract.interface.events[eventName]) {
+                throw new VError(`event name ${eventName} does not exist on the contract interface`);
+            }
+            const Event = this.contract.interface.events[eventName]();
+            //const Event = this.contract.interface.events.Transfer();
+            const logs = await this.transactionsProvider.getLogs({
+                fromBlock: fromBlock,
+                toBlock: "latest",
+                address: this.contract.address,
+                topics: Event.topics
+            });
+            const events = [];
+            for (const log of logs) {
+                const event = Event.parse(log.topics, log.data);
+                // TODO convert any Ethers BigNumbers to BN
+                events.push(event);
+            }
             logger.debug(`${events.length} events successfully returned from ${description}`);
             return events;
         }
@@ -177,8 +186,7 @@ class Token {
             const transferEvents = await this.getEvents("Transfer");
             const holderBalances = {};
             transferEvents.forEach(event => {
-                const fromAddress = event.returnValues.fromAddress, toAddress = event.returnValues.toAddress, amount = Number(event.returnValues.amount);
-                //const {fromAddress: string, toAddress: string, amount: number } = event.returnValues;
+                const fromAddress = event.fromAddress, toAddress = event.toAddress, amount = Number(event.amount);
                 // if deposit
                 if (fromAddress == '0x0000000000000000000000000000000000000000') {
                     holderBalances[toAddress] = (holderBalances[toAddress]) ?
@@ -207,15 +215,15 @@ class Token {
             throw error;
         }
     }
-    async processTransaction(hash, description, gas) {
+    async processTransaction(hash, description, gasLimit) {
         // wait for the transaction to be mined
-        const minedTransaction = await this.provider.waitForTransaction(hash);
+        const minedTransaction = await this.transactionsProvider.waitForTransaction(hash);
         logger.debug(`${hash} mined in block number ${minedTransaction.blockNumber} for ${description}`);
-        const transactionReceipt = await this.provider.getTransactionReceipt(hash);
-        logger.debug(`Status ${transactionReceipt.status} and ${transactionReceipt.gasUsed} gas of ${gas} used for ${description}`);
+        const transactionReceipt = await this.transactionsProvider.getTransactionReceipt(hash);
+        logger.debug(`Status ${transactionReceipt.status} and ${transactionReceipt.gasUsed} gas of ${gasLimit} used for ${description}`);
         // If a status of 0 was returned then the transaction failed. Status 1 means the transaction worked
         if (transactionReceipt.status.eq(0)) {
-            throw VError(`Failed ${hash} transaction with status code ${transactionReceipt.status} and ${gas} gas used.`);
+            throw VError(`Failed ${hash} transaction with status code ${transactionReceipt.status} and ${gasLimit} gas used.`);
         }
         return transactionReceipt;
     }

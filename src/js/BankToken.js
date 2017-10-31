@@ -19,7 +19,7 @@ class BankToken extends token_1.default {
         const self = this;
         const gas = _gas || self.defaultGas;
         const gasPrice = _gasPrice || self.defaultGasPrice;
-        const description = `deposit ${amount} tokens to address ${toAddress}, from sender address ${self.contractOwner}, contract ${this.web3Contract._address}, external id ${externalId}, bank transaction id ${bankTransactionId}, gas limit ${gas} (0x${gas.toString(16)}) and gas price ${gasPrice} (0x${gasPrice.toString(16)})`;
+        const description = `deposit ${amount} tokens to address ${toAddress}, from sender address ${self.contractOwner}, contract ${this.contract.address}, external id ${externalId}, bank transaction id ${bankTransactionId}, gas limit ${gas} (0x${gas.toString(16)}) and gas price ${gasPrice} (0x${gasPrice.toString(16)})`;
         return new Promise(async (resolve, reject) => {
             try {
                 // send the transaction
@@ -43,11 +43,11 @@ class BankToken extends token_1.default {
         const self = this;
         const gas = _gas || self.defaultGas;
         const gasPrice = _gasPrice || self.defaultGasPrice;
-        const description = `request withdraw of ${amount} tokens from contract ${this.web3Contract._address} and token holder ${tokenHolderAddress}`;
+        const description = `request withdraw of ${amount} tokens from contract ${this.contract.address} and token holder ${tokenHolderAddress}`;
         return new Promise(async (resolve, reject) => {
             try {
                 const privateKey = await self.ethSigner.getPrivateKey(tokenHolderAddress);
-                const wallet = new ethers_1.Wallet(privateKey, self.provider);
+                const wallet = new ethers_1.Wallet(privateKey, self.transactionsProvider);
                 const contract = new ethers_1.Contract(self.contract.address, self.jsonInterface, wallet);
                 // send the transaction
                 const broadcastTransaction = await contract.requestWithdrawal(amount, {
@@ -69,7 +69,7 @@ class BankToken extends token_1.default {
         const self = this;
         const gas = _gas || self.defaultGas;
         const gasPrice = _gasPrice || self.defaultGasPrice;
-        const description = `confirm withdrawal number ${withdrawalNumber} against contract ${this.web3Contract._address} using contract owner ${self.contractOwner}`;
+        const description = `confirm withdrawal number ${withdrawalNumber} against contract ${this.contract.address} using contract owner ${self.contractOwner}`;
         return new Promise(async (resolve, reject) => {
             try {
                 // send the transaction
@@ -89,7 +89,7 @@ class BankToken extends token_1.default {
         });
     }
     async isTokenHolder(address) {
-        const description = `is address ${address} a token holder in contract at address ${this.web3Contract._address}`;
+        const description = `is address ${address} a token holder in contract at address ${this.contract.address}`;
         try {
             const result = await this.contract.isTokenHolder(address);
             logger.info(`Got ${result[0]} result for ${description}`);
@@ -102,7 +102,7 @@ class BankToken extends token_1.default {
         }
     }
     async hasBankTransactionId(bankTransactionId) {
-        const description = `has bank transaction id ${bankTransactionId} been used in contract at address ${this.web3Contract._address}`;
+        const description = `has bank transaction id ${bankTransactionId} been used in contract at address ${this.contract.address}`;
         try {
             const result = await this.contract.hasBankTransactionId(bankTransactionId);
             logger.info(`Got ${result[0]} result for ${description}`);

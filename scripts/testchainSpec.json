@@ -3,7 +3,7 @@
     "engine": {
 		"instantSeal": null
 	},
-	"genesis": {
+	"genesis": {	
 		"seal": {
 			"generic": "0x0"
 		},
@@ -11,10 +11,15 @@
 		"gasLimit": "0x2fefd8"
 	},
 	"params": {
-			"networkID" : "0x2",
+			"networkID" : "0x64",
 			"maximumExtraDataSize": "0x20",
 			"minGasLimit": "0x1388",
-			"gasLimitBoundDivisor": "0x400"
+			"gasLimitBoundDivisor": "0x400",
+			"forkBlock": 1,
+			"eip140Transition": 1,
+			"eip211Transition": 1,
+			"eip214Transition": 1,
+			"eip658Transition": 1
 	},
 	"accounts": {
 		"0xd728cee2648a642fda9dc1218d2d5746848400ba": { "balance": "10000000000000000000000000"},
