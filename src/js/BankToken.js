@@ -29,8 +29,8 @@ class BankToken extends token_1.default {
                     gasLimit: gas
                 });
                 logger.debug(`${broadcastTransaction.hash} is transaction hash and nonce ${broadcastTransaction.nonce} for ${description}`);
-                await self.processTransaction(broadcastTransaction.hash, description, gas);
-                resolve(broadcastTransaction.hash);
+                const transactionReceipt = await self.processTransaction(broadcastTransaction.hash, description, gas);
+                resolve(transactionReceipt);
             }
             catch (err) {
                 const error = new VError(err, `Failed to ${description}.`);
@@ -56,8 +56,8 @@ class BankToken extends token_1.default {
                     gasLimit: gas
                 });
                 logger.debug(`${broadcastTransaction.hash} is transaction hash and nonce ${broadcastTransaction.nonce} for ${description}`);
-                await self.processTransaction(broadcastTransaction.hash, description, gas);
-                resolve(broadcastTransaction.hash);
+                const transactionReceipt = await self.processTransaction(broadcastTransaction.hash, description, gas);
+                resolve(transactionReceipt);
             }
             catch (err) {
                 const error = new VError(err, `Failed to ${description}.`);
@@ -79,8 +79,8 @@ class BankToken extends token_1.default {
                     gasLimit: gas
                 });
                 logger.debug(`${broadcastTransaction.hash} is transaction hash and nonce ${broadcastTransaction.nonce} for ${description}`);
-                await self.processTransaction(broadcastTransaction.hash, description, gas);
-                resolve(broadcastTransaction.hash);
+                const transactionReceipt = await self.processTransaction(broadcastTransaction.hash, description, gas);
+                resolve(transactionReceipt);
             }
             catch (err) {
                 const error = new VError(err, `Failed to ${description}.`);

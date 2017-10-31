@@ -6,6 +6,7 @@ import {Wallet, Contract} from 'ethers';
 import Token from './token';
 
 import {KeyStore} from './keyStore/index.d';
+import {TransactionReceipt} from './index';
 
 export default class BankToken extends Token
 {
@@ -17,13 +18,13 @@ export default class BankToken extends Token
     }
 
     // deploy a new web3Contract
-    deployContract(contractOwner: string, symbol = "DAD", tokenName = "Digital Australian Dollar", gas = 1900000, gasPrice = 4000000000): Promise<string>
+    deployContract(contractOwner: string, symbol = "DAD", tokenName = "Digital Australian Dollar", gas = 1900000, gasPrice = 4000000000): Promise<TransactionReceipt>
     {
         return super.deployContract(contractOwner, symbol, tokenName, gas, gasPrice);
     }
 
     // deposit an amount of tokens to an address
-    deposit(toAddress: string, amount: number, externalId: string, bankTransactionId: string, _gas?: number, _gasPrice?: number): Promise<string>
+    deposit(toAddress: string, amount: number, externalId: string, bankTransactionId: string, _gas?: number, _gasPrice?: number): Promise<TransactionReceipt>
     {
         const self = this;
 
@@ -32,7 +33,7 @@ export default class BankToken extends Token
 
         const description = `deposit ${amount} tokens to address ${toAddress}, from sender address ${self.contractOwner}, contract ${this.contract.address}, external id ${externalId}, bank transaction id ${bankTransactionId}, gas limit ${gas} (0x${gas.toString(16)}) and gas price ${gasPrice} (0x${gasPrice.toString(16)})`;
 
-        return new Promise<string>(async(resolve, reject) =>
+        return new Promise<TransactionReceipt>(async(resolve, reject) =>
         {
             try
             {
@@ -44,9 +45,9 @@ export default class BankToken extends Token
 
                 logger.debug(`${broadcastTransaction.hash} is transaction hash and nonce ${broadcastTransaction.nonce} for ${description}`);
 
-                await self.processTransaction(broadcastTransaction.hash, description, gas);
+                const transactionReceipt = await self.processTransaction(broadcastTransaction.hash, description, gas);
 
-                resolve(broadcastTransaction.hash);
+                resolve(transactionReceipt);
             }
             catch (err)
             {
@@ -58,7 +59,7 @@ export default class BankToken extends Token
     }
 
     // a token holder requests the token issuer to send a bank payment for their redeemed tokens
-    requestWithdrawal(tokenHolderAddress: string, amount: number, _gas?: number, _gasPrice?: number): Promise<string>
+    requestWithdrawal(tokenHolderAddress: string, amount: number, _gas?: number, _gasPrice?: number): Promise<TransactionReceipt>
     {
         const self = this;
 
@@ -67,7 +68,7 @@ export default class BankToken extends Token
 
         const description = `request withdraw of ${amount} tokens from contract ${this.contract.address} and token holder ${tokenHolderAddress}`;
 
-        return new Promise<string>(async(resolve, reject) =>
+        return new Promise<TransactionReceipt>(async(resolve, reject) =>
         {
             try
             {
@@ -84,9 +85,9 @@ export default class BankToken extends Token
 
                 logger.debug(`${broadcastTransaction.hash} is transaction hash and nonce ${broadcastTransaction.nonce} for ${description}`);
 
-                await self.processTransaction(broadcastTransaction.hash, description, gas);
+                const transactionReceipt = await self.processTransaction(broadcastTransaction.hash, description, gas);
 
-                resolve(broadcastTransaction.hash);
+                resolve(transactionReceipt);
             }
             catch (err)
             {
@@ -97,7 +98,7 @@ export default class BankToken extends Token
         });
     }
 
-    confirmWithdraw(withdrawalNumber: number, _gas?: number, _gasPrice?: number): Promise<string>
+    confirmWithdraw(withdrawalNumber: number, _gas?: number, _gasPrice?: number): Promise<TransactionReceipt>
     {
         const self = this;
 
@@ -106,7 +107,7 @@ export default class BankToken extends Token
 
         const description = `confirm withdrawal number ${withdrawalNumber} against contract ${this.contract.address} using contract owner ${self.contractOwner}`;
 
-        return new Promise<string>(async(resolve, reject) =>
+        return new Promise<TransactionReceipt>(async(resolve, reject) =>
         {
             try
             {
@@ -118,9 +119,9 @@ export default class BankToken extends Token
 
                 logger.debug(`${broadcastTransaction.hash} is transaction hash and nonce ${broadcastTransaction.nonce} for ${description}`);
 
-                await self.processTransaction(broadcastTransaction.hash, description, gas);
+                const transactionReceipt = await self.processTransaction(broadcastTransaction.hash, description, gas);
 
-                resolve(broadcastTransaction.hash);
+                resolve(transactionReceipt);
             }
             catch (err)
             {

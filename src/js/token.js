@@ -35,11 +35,9 @@ class Token {
                 // Send the transaction
                 const broadcastTransaction = await wallet.sendTransaction(deployTransaction);
                 logger.debug(`${broadcastTransaction.hash} is transaction hash for ${description}`);
-                // wait for the transaction to be mined
-                const minedTransaction = await self.transactionsProvider.waitForTransaction(broadcastTransaction.hash);
-                logger.debug(`Created contract with address ${minedTransaction.creates} for ${description}`);
-                self.contract = new ethers_1.Contract(minedTransaction.creates, self.jsonInterface, wallet);
-                resolve(minedTransaction.creates);
+                const transactionReceipt = await self.processTransaction(broadcastTransaction.hash, description, gas);
+                self.contract = new ethers_1.Contract(transactionReceipt.contractAddress, self.jsonInterface, wallet);
+                resolve(transactionReceipt);
             }
             catch (err) {
                 const error = new VError(err, `Failed to ${description}.`);
@@ -66,7 +64,7 @@ class Token {
                 });
                 logger.debug(`${broadcastTransaction.hash} is transaction hash and nonce ${broadcastTransaction.nonce} for ${description}`);
                 const transactionReceipt = await self.processTransaction(broadcastTransaction.hash, description, gas);
-                resolve(broadcastTransaction.hash);
+                resolve(transactionReceipt);
             }
             catch (err) {
                 const error = new VError(err, `Failed to ${description}.`);

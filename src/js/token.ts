@@ -7,6 +7,7 @@ import * as VError from 'verror';
 import {convertEthersBNs} from "./utils";
 
 import {KeyStore} from './keyStore/index.d';
+import {TransactionReceipt} from "./index";
 
 declare type HolderBalances = {
     [holderAddress: string] : number
@@ -34,14 +35,14 @@ export default class Token
     }
 
     // deploy a new contract
-    deployContract(contractOwner: string, symbol: string, tokenName: string, gas = 1900000, gasPrice = 4000000000): Promise<string>
+    deployContract(contractOwner: string, symbol: string, tokenName: string, gas = 1900000, gasPrice = 4000000000): Promise<TransactionReceipt>
     {
         const self = this;
         this.contractOwner = contractOwner;
 
         const description = `deploy token with symbol ${symbol}, name "${tokenName}" from sender address ${self.contractOwner}, gas ${gas} and gasPrice ${gasPrice}`;
 
-        return new Promise<string>(async (resolve, reject) =>
+        return new Promise<TransactionReceipt>(async (resolve, reject) =>
         {
             logger.debug(`About to ${description}`);
 
@@ -62,14 +63,11 @@ export default class Token
 
                 logger.debug(`${broadcastTransaction.hash} is transaction hash for ${description}`);
 
-                // wait for the transaction to be mined
-                const minedTransaction = await self.transactionsProvider.waitForTransaction(broadcastTransaction.hash);
+                const transactionReceipt = await self.processTransaction(broadcastTransaction.hash, description, gas);
 
-                logger.debug(`Created contract with address ${minedTransaction.creates} for ${description}`);
+                self.contract = new Contract(transactionReceipt.contractAddress, self.jsonInterface, wallet);
 
-                self.contract = new Contract(minedTransaction.creates, self.jsonInterface, wallet);
-
-                resolve(minedTransaction.creates);
+                resolve(transactionReceipt);
             }
             catch (err)
             {
@@ -81,7 +79,7 @@ export default class Token
     }
 
     // transfer an amount of tokens from one address to another
-    transfer(fromAddress: string, toAddress: string, amount: number, _gas?: number, _gasPrice?: number): Promise<string>
+    transfer(fromAddress: string, toAddress: string, amount: number, _gas?: number, _gasPrice?: number): Promise<TransactionReceipt>
     {
         const self = this;
 
@@ -90,7 +88,7 @@ export default class Token
 
         const description = `transfer ${amount} tokens from address ${fromAddress}, to address ${toAddress}, contract ${this.contract.address}, gas limit ${gas} and gas price ${gasPrice}`;
 
-        return new Promise<string>(async (resolve, reject) =>
+        return new Promise<TransactionReceipt>(async (resolve, reject) =>
         {
             try
             {
@@ -109,7 +107,7 @@ export default class Token
 
                 const transactionReceipt = await self.processTransaction(broadcastTransaction.hash, description, gas);
 
-                resolve(broadcastTransaction.hash);
+                resolve(transactionReceipt);
             }
             catch (err) {
                 const error = new VError(err, `Failed to ${description}.`);
@@ -318,14 +316,14 @@ export default class Token
         }
     }
 
-    async processTransaction(hash: string, description: string, gasLimit: number): Promise<object>
+    async processTransaction(hash: string, description: string, gasLimit: number): Promise<TransactionReceipt>
     {
         // wait for the transaction to be mined
         const minedTransaction = await this.transactionsProvider.waitForTransaction(hash);
 
         logger.debug(`${hash} mined in block number ${minedTransaction.blockNumber} for ${description}`);
 
-        const transactionReceipt = await this.transactionsProvider.getTransactionReceipt(hash);
+        const transactionReceipt: TransactionReceipt = await this.transactionsProvider.getTransactionReceipt(hash);
 
         logger.debug(`Status ${transactionReceipt.status} and ${transactionReceipt.gasUsed} gas of ${gasLimit} used for ${description}`);
 

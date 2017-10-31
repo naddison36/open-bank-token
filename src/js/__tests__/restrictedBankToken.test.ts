@@ -36,9 +36,9 @@ describe("BankToken", ()=>
         {
             expect.assertions(5);
 
-            const contractAddress = await bankToken.deployContract(testContractOwner);
+            const txReceipt = await bankToken.deployContract(testContractOwner);
 
-            expect(contractAddress).toHaveLength(42);
+            expect(txReceipt.contractAddress).toHaveLength(42);
 
             expect(await bankToken.getSymbol()).toEqual('DAD');
             expect(await bankToken.getName()).toEqual('Digital Australian Dollar');
@@ -51,9 +51,9 @@ describe("BankToken", ()=>
         {
             expect.assertions(4);
 
-            const contractAddress = await bankToken.deployContract(testContractOwner, "Test", "Test name");
+            const txReceipt = await bankToken.deployContract(testContractOwner, "Test", "Test name");
 
-            expect(contractAddress).toHaveLength(42);
+            expect(txReceipt.contractAddress).toHaveLength(42);
 
             expect(await bankToken.getSymbol()).toEqual('Test');
             expect(await bankToken.getName()).toEqual('Test name');
@@ -87,11 +87,11 @@ describe("BankToken", ()=>
 
             expect(await bankToken.isTokenHolder(depositor1)).toEqual(false);
 
-            const hash = await bankToken.deposit(depositor1, 100, '1111', '10000');
+            const txReceipt = await bankToken.deposit(depositor1, 100, '1111', '10000');
 
             expect(await bankToken.isTokenHolder(depositor1)).toEqual(true);
 
-            expect(hash).toHaveLength(66);
+            expect(txReceipt.transactionHash).toHaveLength(66);
             expect(await bankToken.getTotalSupply()).toMatchObject(new BN(100));
             expect(await bankToken.getBalanceOf(depositor1)).toMatchObject(new BN(100));
             expect(await bankToken.getBalanceOf(depositor2)).toMatchObject(new BN(0));
@@ -116,11 +116,11 @@ describe("BankToken", ()=>
 
             expect(await bankToken.isTokenHolder(depositor2)).toEqual(false);
 
-            const hash = await bankToken.deposit(depositor2, 200, '2222', '10001');
+            const txReceipt = await bankToken.deposit(depositor2, 200, '2222', '10001');
 
             expect(await bankToken.isTokenHolder(depositor2)).toEqual(true);
 
-            expect(hash).toHaveLength(66);
+            expect(txReceipt.transactionHash).toHaveLength(66);
             expect(await bankToken.getTotalSupply()).toMatchObject(new BN(300));
             expect(await bankToken.getBalanceOf(depositor1)).toMatchObject(new BN(100));
             expect(await bankToken.getBalanceOf(depositor2)).toMatchObject(new BN(200));
@@ -132,11 +132,11 @@ describe("BankToken", ()=>
 
             expect(await bankToken.hasBankTransactionId('10003')).toEqual(false);
 
-            const hash = await bankToken.deposit(depositor1, 10, '1111', '10003');
+            const txReceipt = await bankToken.deposit(depositor1, 10, '1111', '10003');
 
             expect(await bankToken.hasBankTransactionId('10003')).toEqual(true);
 
-            expect(hash).toHaveLength(66);
+            expect(txReceipt.transactionHash).toHaveLength(66);
             expect(await bankToken.getTotalSupply()).toMatchObject(new BN(310));
             expect(await bankToken.getBalanceOf(depositor1)).toMatchObject(new BN(110));
         }, 40000);
@@ -252,7 +252,7 @@ describe("BankToken", ()=>
             expect.assertions(4);
 
             try {
-                const hash = await bankToken.transfer(depositor1, depositor3, 100);
+                const transactionReceipt = await bankToken.transfer(depositor1, depositor3, 100);
             }
             catch (err) {
                 expect(err instanceof Error).toBeTruthy();
@@ -268,7 +268,7 @@ describe("BankToken", ()=>
             expect.assertions(3);
 
             try {
-                const hash = await bankToken.transfer(depositor3, depositor1, 1);
+                const transactionReceipt = await bankToken.transfer(depositor3, depositor1, 1);
             }
             catch (err) {
                 expect(err instanceof Error).toBeTruthy();
@@ -283,7 +283,7 @@ describe("BankToken", ()=>
             expect.assertions(3);
 
             try {
-                const hash = await bankToken.transfer(depositor1, depositor2, 200);
+                const transactionReceipt = await bankToken.transfer(depositor1, depositor2, 200);
             }
             catch (err) {
                 expect(err instanceof Error).toBeTruthy();
@@ -297,8 +297,8 @@ describe("BankToken", ()=>
         {
             expect.assertions(3);
 
-            const hash = await bankToken.transfer(depositor1, depositor2, 12);
-            expect(hash).toHaveLength(66);
+            const txReceipt = await bankToken.transfer(depositor1, depositor2, 12);
+            expect(txReceipt.transactionHash).toHaveLength(66);
 
             const depositor1Balance = await bankToken.getBalanceOf(depositor1);
             expect(depositor1Balance.toString()).toEqual(new BN(987).toString());
@@ -323,9 +323,9 @@ describe("BankToken", ()=>
         {
             expect.assertions(3);
 
-            const hash = await bankToken.transfer(depositor2, depositor1, 13);
+            const txReceipt = await bankToken.transfer(depositor2, depositor1, 13);
 
-            expect(hash).toHaveLength(66);
+            expect(txReceipt.transactionHash).toHaveLength(66);
             expect(await bankToken.getBalanceOf(depositor1)).toMatchObject(new BN(1000));
             expect(await bankToken.getBalanceOf(depositor2)).toMatchObject(new BN(887));
         }, 40000);
@@ -334,9 +334,9 @@ describe("BankToken", ()=>
         {
             expect.assertions(3);
 
-            const hash = await bankToken.transfer(depositor1, depositor2, 0);
+            const txReceipt = await bankToken.transfer(depositor1, depositor2, 0);
 
-            expect(hash).toHaveLength(66);
+            expect(txReceipt.transactionHash).toHaveLength(66);
             expect(await bankToken.getBalanceOf(depositor1)).toMatchObject(new BN(1000));
             expect(await bankToken.getBalanceOf(depositor2)).toMatchObject(new BN(887));
         }, 40000);
@@ -401,9 +401,9 @@ describe("BankToken", ()=>
         {
             expect.assertions(4);
 
-            const hash = await bankToken.requestWithdrawal(depositor1, 100);
+            const txReceipt = await bankToken.requestWithdrawal(depositor1, 100);
 
-            expect(hash).toHaveLength(66);
+            expect(txReceipt.transactionHash).toHaveLength(66);
             expect(await bankToken.getBalanceOf(depositor1)).toMatchObject(new BN(900));
             expect(await bankToken.getBalanceOf(depositor2)).toMatchObject(new BN(1000));
             expect(await bankToken.getTotalSupply()).toMatchObject(new BN(1900));
@@ -442,15 +442,15 @@ describe("BankToken", ()=>
             expect.assertions(7);
 
             // need a deposit before a transfer can be done to a new token holder
-            const depositHash = await bankToken.deposit(depositor3, 0, '6666', '10502');
-            expect(depositHash).toHaveLength(66);
+            const depositTxReceipt = await bankToken.deposit(depositor3, 0, '6666', '10502');
+            expect(depositTxReceipt.transactionHash).toHaveLength(66);
 
-            const transferHash = await bankToken.transfer(depositor1, depositor3, 99);
-            expect(transferHash).toHaveLength(66);
+            const transferTxReceipt = await bankToken.transfer(depositor1, depositor3, 99);
+            expect(transferTxReceipt.transactionHash).toHaveLength(66);
 
-            const withdrawalHash = await bankToken.requestWithdrawal(depositor1, 100);
+            const withdrawalTxReceipt = await bankToken.requestWithdrawal(depositor1, 100);
 
-            expect(withdrawalHash).toHaveLength(66);
+            expect(withdrawalTxReceipt.transactionHash).toHaveLength(66);
             expect(await bankToken.getBalanceOf(depositor1)).toMatchObject(new BN(701));
             expect(await bankToken.getBalanceOf(depositor2)).toMatchObject(new BN(1000));
             expect(await bankToken.getBalanceOf(depositor3)).toMatchObject(new BN(99));
