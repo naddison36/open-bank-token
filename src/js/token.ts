@@ -17,25 +17,21 @@ export default class Token
 {
     contract: object;
     contractOwner: string;
-    contractBinary: string;
-
-    defaultGasLimit = 120000;
-    defaultGasPrice = 2000000000;
 
     transactions: { [transactionHash: string] : number; } = {};
 
     constructor(readonly transactionsProvider: Provider, readonly eventsProvider: Provider,
                 contractOwner: string, readonly keyStore: KeyStore,
-                readonly jsonInterface: {}, contractBinary?: string, contractAddress?: string)
+                readonly jsonInterface: object[], readonly contractBinary: string, contractAddress?: string,
+                readonly defaultGasPrice = 1000000000, readonly defaultGasLimit = 120000)
     {
         this.contractOwner = contractOwner;
-        this.contractBinary = contractBinary;
 
         this.contract = new Contract(contractAddress, jsonInterface, this.transactionsProvider);
     }
 
     // deploy a new contract
-    deployContract(contractOwner: string, symbol: string, tokenName: string, gasLimit = 1900000, gasPrice = 4000000000): Promise<TransactionReceipt>
+    deployContract(contractOwner: string, symbol: string, tokenName: string, gasLimit = 1900000, gasPrice = 2000000000): Promise<TransactionReceipt>
     {
         const self = this;
         this.contractOwner = contractOwner;
@@ -65,6 +61,8 @@ export default class Token
 
                 // Send the transaction
                 const broadcastTransaction = await wallet.sendTransaction(deployTransaction);
+
+                console.log(broadcastTransaction);
 
                 logger.debug(`${broadcastTransaction.hash} is transaction hash for ${description}`);
 

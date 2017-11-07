@@ -19,8 +19,8 @@ describe("BankToken", ()=>
     const jsonInterface = JSON.parse(defaultJsonInterfaceStr);
     const contractBinary = '0x' + fs.readFileSync(bankTokenBinaryFile, 'utf8');
 
-    const transactionsProvider = new Providers.JsonRpcProvider("http://localhost:8646", true, 100);  // ChainId 100 = 0x64
-    const eventsProvider = new Providers.JsonRpcProvider("http://localhost:8646", true, 100);  // ChainId 100 = 0x64
+    const transactionsProvider = new Providers.JsonRpcProvider("http://localhost:8646", true, 0);  // ChainId 100 = 0x64
+    const eventsProvider = new Providers.JsonRpcProvider("http://localhost:8646", true, 0);  // ChainId 100 = 0x64
 
     const bankToken = new RestrictedBankToken(transactionsProvider, eventsProvider,
         testContractOwner,
@@ -399,7 +399,11 @@ describe("BankToken", ()=>
 
         test("request withdraw from first depositor", async ()=>
         {
-            expect.assertions(4);
+            expect.assertions(6);
+
+            const preWithdrawalCounter = await bankToken.getWithdrawalCounter();
+
+            expect(preWithdrawalCounter.toNumber()).toEqual(0);
 
             const txReceipt = await bankToken.requestWithdrawal(depositor1, 100);
 
@@ -407,6 +411,9 @@ describe("BankToken", ()=>
             expect(await bankToken.getBalanceOf(depositor1)).toMatchObject(new BN(900));
             expect(await bankToken.getBalanceOf(depositor2)).toMatchObject(new BN(1000));
             expect(await bankToken.getTotalSupply()).toMatchObject(new BN(1900));
+
+            const postWithdrawalCounter = await bankToken.getWithdrawalCounter();
+            expect(postWithdrawalCounter.toNumber()).toEqual(preWithdrawalCounter.toNumber() + 1);
         }, 30000);
 
         test("event from request withdrawal", async()=>
@@ -416,8 +423,8 @@ describe("BankToken", ()=>
             const events = await bankToken.getEvents("RequestWithdrawal");
 
             expect(events).toHaveLength(1);
-            expect(events[0].withdrawalNumber).toMatchObject(new BN(1));
-            expect(events[0].fromAddress.toUpperCase()).toEqual(depositor1.toUpperCase());
+            expect(events[0].withdrawalNumber).toMatchObject(new BN(0));
+            expect(events[0].withdrawer.toUpperCase()).toEqual(depositor1.toUpperCase());
             expect(events[0].amount).toMatchObject(new BN(100));
         }, 40000);
 
@@ -436,6 +443,36 @@ describe("BankToken", ()=>
             expect(keys[1].toUpperCase()).toEqual(depositor2.toUpperCase());
             expect(tokenHolderBalances[keys[1]]).toEqual(1000);
         }, 30000);
+
+        test("confirm withdrawal request", async()=>
+        {
+            expect.assertions(6);
+
+            const preConfirm = await bankToken.hasConfirmedWithdrawal(new BN(0));
+            expect(preConfirm).toBeFalsy();
+
+            const txReceipt = await bankToken.confirmWithdrawal(new BN(0));
+
+            expect(txReceipt.transactionHash).toHaveLength(66);
+            expect(await bankToken.getBalanceOf(depositor1)).toMatchObject(new BN(900));
+            expect(await bankToken.getBalanceOf(depositor2)).toMatchObject(new BN(1000));
+            expect(await bankToken.getTotalSupply()).toMatchObject(new BN(1900));
+
+            const postConfirm = await bankToken.hasConfirmedWithdrawal(new BN(0));
+            expect(postConfirm).toBeTruthy();
+        }, 30000);
+
+        test("event from confirm withdrawal", async()=>
+        {
+            expect.assertions(4);
+
+            const events = await bankToken.getEvents("ConfirmWithdrawal");
+
+            expect(events).toHaveLength(1);
+            expect(events[0].withdrawalNumber).toMatchObject(new BN(0));
+            expect(events[0].withdrawer.toUpperCase()).toEqual(depositor1.toUpperCase());
+            expect(events[0].amount).toMatchObject(new BN(100));
+        }, 40000);
 
         test("transfer and then withdraw", async()=>
         {
@@ -475,5 +512,24 @@ describe("BankToken", ()=>
             expect(keys[2].toUpperCase()).toEqual(depositor3.toUpperCase());
             expect(tokenHolderBalances[keys[2]]).toEqual(99);
         }, 20000);
+
+        test("reject withdrawal request", async()=>
+        {
+            expect.assertions(7);
+
+            const preConfirm = await bankToken.hasConfirmedWithdrawal(new BN(1));
+            expect(preConfirm).toBeFalsy();
+
+            const txReceipt = await bankToken.rejectWithdrawal(new BN(1));
+
+            expect(txReceipt.transactionHash).toHaveLength(66);
+            expect(await bankToken.getBalanceOf(depositor1)).toMatchObject(new BN(801));
+            expect(await bankToken.getBalanceOf(depositor2)).toMatchObject(new BN(1000));
+            expect(await bankToken.getBalanceOf(depositor3)).toMatchObject(new BN(99));
+            expect(await bankToken.getTotalSupply()).toMatchObject(new BN(1900));
+
+            const postConfirm = await bankToken.hasConfirmedWithdrawal(new BN(1));
+            expect(postConfirm).toBeFalsy();
+        }, 30000);
     });
 });

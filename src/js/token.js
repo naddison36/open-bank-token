@@ -6,20 +6,20 @@ const logger = require("config-logger");
 const VError = require("verror");
 const utils_1 = require("./utils");
 class Token {
-    constructor(transactionsProvider, eventsProvider, contractOwner, keyStore, jsonInterface, contractBinary, contractAddress) {
+    constructor(transactionsProvider, eventsProvider, contractOwner, keyStore, jsonInterface, contractBinary, contractAddress, defaultGasPrice = 1000000000, defaultGasLimit = 120000) {
         this.transactionsProvider = transactionsProvider;
         this.eventsProvider = eventsProvider;
         this.keyStore = keyStore;
         this.jsonInterface = jsonInterface;
-        this.defaultGasLimit = 120000;
-        this.defaultGasPrice = 2000000000;
+        this.contractBinary = contractBinary;
+        this.defaultGasPrice = defaultGasPrice;
+        this.defaultGasLimit = defaultGasLimit;
         this.transactions = {};
         this.contractOwner = contractOwner;
-        this.contractBinary = contractBinary;
         this.contract = new ethers_1.Contract(contractAddress, jsonInterface, this.transactionsProvider);
     }
     // deploy a new contract
-    deployContract(contractOwner, symbol, tokenName, gasLimit = 1900000, gasPrice = 4000000000) {
+    deployContract(contractOwner, symbol, tokenName, gasLimit = 1900000, gasPrice = 2000000000) {
         const self = this;
         this.contractOwner = contractOwner;
         const description = `deploy token with symbol ${symbol}, name "${tokenName}" from sender address ${self.contractOwner}, gas limit ${gasLimit} and gas price ${gasPrice}`;
@@ -39,6 +39,7 @@ class Token {
                 });
                 // Send the transaction
                 const broadcastTransaction = await wallet.sendTransaction(deployTransaction);
+                console.log(broadcastTransaction);
                 logger.debug(`${broadcastTransaction.hash} is transaction hash for ${description}`);
                 const transactionReceipt = await self.processTransaction(broadcastTransaction.hash, description, gasLimit);
                 self.contract = new ethers_1.Contract(transactionReceipt.contractAddress, self.jsonInterface, wallet);

@@ -22,6 +22,12 @@ contract RestrictedBankToken is ERC20Token
 {
     using SafeMath for uint256;
 
+    struct Withdrawal {
+        address withdrawer;
+        uint256 amount;
+        bool confirmed;
+    }
+
     //uint8 public decimals = 0;
     address public owner = msg.sender;
     address public newOwner;
@@ -33,7 +39,7 @@ contract RestrictedBankToken is ERC20Token
 
     // used to track the state of withdrawals
     uint256 public withdrawalCounter = 0;
-    mapping (uint256 => bool) confirmedWithdrawals;
+    mapping (uint256 => Withdrawal) withdrawals;
 
     // constructor
     function RestrictedBankToken(string tokenSymbol, string tokenName)
@@ -48,11 +54,19 @@ contract RestrictedBankToken is ERC20Token
 
     event RequestWithdrawal(
         uint256 indexed withdrawalNumber,
-        address indexed fromAddress,
+        address indexed withdrawer,
         uint256 amount);
 
     event ConfirmWithdrawal(
-        uint256 indexed withdrawalNumber
+        uint256 indexed withdrawalNumber,
+        address indexed withdrawer,
+        uint256 amount
+    );
+
+    event RejectWithdrawal(
+        uint256 indexed withdrawalNumber,
+        address indexed withdrawer,
+        uint256 amount
     );
 
     // Checks an address has previously depositored funds the the bank account
@@ -118,7 +132,14 @@ contract RestrictedBankToken is ERC20Token
         totSupply = totSupply.sub(amount);
         balances[msg.sender] = balances[msg.sender].sub(amount);
 
-        RequestWithdrawal(++withdrawalCounter, msg.sender, amount);
+        uint256 withdrawalNumber = withdrawalCounter++;
+
+        //TODO is this correct? Should a new struct be declared first to create space?
+        withdrawals[withdrawalNumber].withdrawer = msg.sender;
+        withdrawals[withdrawalNumber].amount = amount;
+        withdrawals[withdrawalNumber].confirmed = false;
+
+        RequestWithdrawal(withdrawalNumber, msg.sender, amount);
         Transfer(msg.sender, 0x0, amount);
 
         return withdrawalCounter;
@@ -129,11 +150,26 @@ contract RestrictedBankToken is ERC20Token
         onlyOwner()
         returns (bool)
     {
-        require(confirmedWithdrawals[withdrawalNumber] == false);
+        require(withdrawals[withdrawalNumber].confirmed == false);
 
-        confirmedWithdrawals[withdrawalNumber] = true;
+        withdrawals[withdrawalNumber].confirmed = true;
 
-        ConfirmWithdrawal(withdrawalCounter);
+        ConfirmWithdrawal(withdrawalNumber, withdrawals[withdrawalNumber].withdrawer, withdrawals[withdrawalNumber].amount);
+
+        return true;
+    }
+
+    // Used by the contract owner to reject a withdrawal request as the payment could not be sent
+    function rejectWithdrawal(uint256 withdrawalNumber) public
+        onlyOwner()
+        returns (bool)
+    {
+        require(withdrawals[withdrawalNumber].confirmed == false);
+
+        totSupply = totSupply.add(withdrawals[withdrawalNumber].amount);
+        balances[withdrawals[withdrawalNumber].withdrawer] = balances[withdrawals[withdrawalNumber].withdrawer].add(withdrawals[withdrawalNumber].amount);
+
+        RejectWithdrawal(withdrawalCounter, withdrawals[withdrawalNumber].withdrawer, withdrawals[withdrawalNumber].amount);
 
         return true;
     }
@@ -186,7 +222,11 @@ contract RestrictedBankToken is ERC20Token
 
     // checks if a withdrawal number has already been confirmed by the custodian
     function hasConfirmedWithdrawal(uint256 withdrawalNumber) public view returns (bool) {
-        return confirmedWithdrawals[withdrawalNumber];
+        return withdrawals[withdrawalNumber].confirmed;
+    }
+
+    function getWithdrawalCounter() public view returns (uint256) {
+        return withdrawalCounter;
     }
 
     function approve(address spender, uint256 amount) public

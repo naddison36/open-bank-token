@@ -5,11 +5,13 @@ const logger = require("config-logger");
 const ethers_1 = require("ethers");
 const token_1 = require("./token");
 class BankToken extends token_1.default {
-    constructor(transactionsProvider, eventsProvider, contractOwner, keyStore, jsonInterface, contractBinary, contractAddress) {
-        super(transactionsProvider, eventsProvider, contractOwner, keyStore, jsonInterface, contractBinary, contractAddress);
+    constructor(transactionsProvider, eventsProvider, contractOwner, keyStore, jsonInterface, contractBinary, contractAddress, defaultGasPrice = 1000000000, defaultGasLimit = 120000) {
+        super(transactionsProvider, eventsProvider, contractOwner, keyStore, jsonInterface, contractBinary, contractAddress, defaultGasPrice, defaultGasLimit);
         this.transactionsProvider = transactionsProvider;
         this.eventsProvider = eventsProvider;
         this.keyStore = keyStore;
+        this.defaultGasPrice = defaultGasPrice;
+        this.defaultGasLimit = defaultGasLimit;
     }
     // deploy a new web3Contract
     deployContract(contractOwner, symbol = "DAD", tokenName = "Digital Australian Dollar", gasLimit = 1900000, gasPrice = 4000000000) {
@@ -62,13 +64,13 @@ class BankToken extends token_1.default {
             }
         });
     }
-    confirmWithdraw(withdrawalNumber, gasLimit = this.defaultGasLimit, gasPrice = this.defaultGasPrice) {
+    confirmWithdrawal(withdrawalNumber, gasLimit = this.defaultGasLimit, gasPrice = this.defaultGasPrice) {
         const self = this;
         const description = `confirm withdrawal number ${withdrawalNumber} against contract ${this.contract.address} using contract owner ${self.contractOwner}`;
         return new Promise(async (resolve, reject) => {
             try {
                 // send the transaction
-                const broadcastTransaction = await self.contract.confirmWithdraw(withdrawalNumber, {
+                const broadcastTransaction = await self.contract.confirmWithdrawal(withdrawalNumber, {
                     gasPrice: gasPrice,
                     gasLimit: gasLimit
                 });
@@ -82,6 +84,53 @@ class BankToken extends token_1.default {
                 reject(error);
             }
         });
+    }
+    rejectWithdrawal(withdrawalNumber, gasLimit = this.defaultGasLimit, gasPrice = this.defaultGasPrice) {
+        const self = this;
+        const description = `reject withdrawal number ${withdrawalNumber} against contract ${this.contract.address} using contract owner ${self.contractOwner}`;
+        return new Promise(async (resolve, reject) => {
+            try {
+                // send the transaction
+                const broadcastTransaction = await self.contract.rejectWithdrawal(withdrawalNumber, {
+                    gasPrice: gasPrice,
+                    gasLimit: gasLimit
+                });
+                logger.debug(`${broadcastTransaction.hash} is transaction hash and nonce ${broadcastTransaction.nonce} for ${description}`);
+                const transactionReceipt = await self.processTransaction(broadcastTransaction.hash, description, gasLimit);
+                resolve(transactionReceipt);
+            }
+            catch (err) {
+                const error = new VError(err, `Failed to ${description}.`);
+                logger.error(error.stack);
+                reject(error);
+            }
+        });
+    }
+    async hasConfirmedWithdrawal(withdrawalNumber) {
+        const description = `has withdrawal number ${withdrawalNumber.toString()} already been confirmed in contract address ${this.contract.address}`;
+        try {
+            const result = await this.contract.hasConfirmedWithdrawal(withdrawalNumber);
+            logger.info(`Got ${result[0]} result for ${description}`);
+            return result[0];
+        }
+        catch (err) {
+            const error = new VError(err, `Could not get ${description}`);
+            logger.error(error.stack);
+            throw error;
+        }
+    }
+    async getWithdrawalCounter() {
+        const description = `get withdrawal counter at address ${this.contract.address}`;
+        try {
+            const result = await this.contract.getWithdrawalCounter();
+            logger.info(`Got ${result[0]} result for ${description}`);
+            return result[0];
+        }
+        catch (err) {
+            const error = new VError(err, `Could not get ${description}`);
+            logger.error(error.stack);
+            throw error;
+        }
     }
     async isTokenHolder(address) {
         const description = `is address ${address} a token holder in contract at address ${this.contract.address}`;
