@@ -575,7 +575,7 @@ describe("BankToken", ()=>
             const rawTransactionReceipt: TransactionReceipt = await transactionsProvider.getTransactionReceipt(hash);
 
             // status 0 is a failed transaction, status 1 is a successful transaction
-            expect(rawTransactionReceipt.status.toNumber()).toEqual(0);
+            expect(rawTransactionReceipt.status).toEqual(0);
         });
     });
 });

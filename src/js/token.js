@@ -1,7 +1,6 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 const ethers_1 = require("ethers");
-const BN = require("bn.js");
 const logger = require("config-logger");
 const VError = require("verror");
 const utils_1 = require("./utils");
@@ -222,7 +221,7 @@ class Token {
         const transactionReceipt = utils_1.convertEthersBNs(rawTransactionReceipt);
         logger.debug(`Status ${transactionReceipt.status} and ${transactionReceipt.gasUsed} gas of ${gasLimit} used for ${description}`);
         // If a status of 0 was returned then the transaction failed. Status 1 means the transaction worked
-        if (transactionReceipt.status.eq(new BN(0))) {
+        if (transactionReceipt.status == 0) {
             throw VError(`Failed ${hash} transaction with status code ${transactionReceipt.status} and ${gasLimit} gas used.`);
         }
         return transactionReceipt;
