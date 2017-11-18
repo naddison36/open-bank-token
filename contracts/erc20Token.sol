@@ -149,4 +149,7 @@ contract ERC20Token
         Approval(msg.sender, spender, allowed[msg.sender][spender]);
         return true;
     }
+
+    // do not accept Ether as fallback function is not payable
+    function() {throw;}
 }

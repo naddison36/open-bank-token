@@ -62,8 +62,6 @@ export default class Token
                 // Send the transaction
                 const broadcastTransaction = await wallet.sendTransaction(deployTransaction);
 
-                console.log(broadcastTransaction);
-
                 logger.debug(`${broadcastTransaction.hash} is transaction hash for ${description}`);
 
                 const transactionReceipt = await self.processTransaction(broadcastTransaction.hash, description, gasLimit);

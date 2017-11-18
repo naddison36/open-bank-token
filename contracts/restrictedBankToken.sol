@@ -169,7 +169,7 @@ contract RestrictedBankToken is ERC20Token
         totSupply = totSupply.add(withdrawals[withdrawalNumber].amount);
         balances[withdrawals[withdrawalNumber].withdrawer] = balances[withdrawals[withdrawalNumber].withdrawer].add(withdrawals[withdrawalNumber].amount);
 
-        RejectWithdrawal(withdrawalCounter, withdrawals[withdrawalNumber].withdrawer, withdrawals[withdrawalNumber].amount);
+        RejectWithdrawal(withdrawalNumber, withdrawals[withdrawalNumber].withdrawer, withdrawals[withdrawalNumber].amount);
 
         return true;
     }
@@ -233,7 +233,7 @@ contract RestrictedBankToken is ERC20Token
         onlyDepositor(spender)    // the receiving address has to have already deposited funds
         returns (bool)
     {
-        super.approve(spender, amount);
+        return super.approve(spender, amount);
     }
 
     function increaseApproval (address spender, uint addedAmount) public
@@ -249,4 +249,7 @@ contract RestrictedBankToken is ERC20Token
     {
         return super.decreaseApproval(spender, subtractedAmount);
     }
+
+    // prevent any Ether being sent to this contract
+    function() {throw;}
 }

@@ -351,6 +351,36 @@ describe("BankToken", () => {
             const postConfirm = await bankToken.hasConfirmedWithdrawal(new BN(1));
             expect(postConfirm).toBeFalsy();
         }, 30000);
+        test("event from reject withdrawal", async () => {
+            expect.assertions(4);
+            const events = await bankToken.getEvents("RejectWithdrawal");
+            expect(events).toHaveLength(1);
+            expect(events[0].withdrawalNumber).toMatchObject(new BN(1));
+            expect(events[0].withdrawer.toUpperCase()).toEqual(depositor1.toUpperCase());
+            expect(events[0].amount).toMatchObject(new BN(100));
+        }, 40000);
+    });
+    describe("Sending Ether", async () => {
+        beforeAll(async () => {
+            await bankToken.deployContract(testContractOwner);
+        }, 30000);
+        test("to Bank Token contract", async () => {
+            expect.assertions(2);
+            const wallet = new ethers_1.Wallet("0x0123456789012345678901234567890123456789012345678901234567890123");
+            const signedTransaction = wallet.sign({
+                to: bankToken.contract.address,
+                nonce: await transactionsProvider.getTransactionCount(wallet.address, "latest"),
+                gasLimit: 120000,
+                gasPrice: 1000000000,
+                value: 1,
+                chainId: transactionsProvider.chainId // the network ID; usually added by a signer
+            });
+            const hash = await transactionsProvider.sendTransaction(signedTransaction);
+            expect(hash).toHaveLength(66);
+            const rawTransactionReceipt = await transactionsProvider.getTransactionReceipt(hash);
+            // status 0 is a failed transaction, status 1 is a successful transaction
+            expect(rawTransactionReceipt.status.toNumber()).toEqual(0);
+        });
     });
 });
 //# sourceMappingURL=restrictedBankToken.test.js.map
