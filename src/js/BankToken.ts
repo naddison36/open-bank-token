@@ -1,8 +1,8 @@
-import {provider as Provider} from 'ethers';
+import {provider as Provider,
+    Wallet, Contract} from 'ethers';
 import * as VError from 'verror';
 import * as logger from 'config-logger';
 import * as BN from 'bn.js';
-import {Wallet, Contract} from 'ethers';
 
 import Token from './token';
 
@@ -12,18 +12,18 @@ import {TransactionReceipt} from './index';
 export default class BankToken extends Token
 {
     constructor(readonly transactionsProvider: Provider, readonly eventsProvider: Provider,
-                contractOwner: string, readonly keyStore: KeyStore,
+                readonly keyStore: KeyStore,
                 jsonInterface: object[], contractBinary?: string, contractAddress?: string,
                 readonly defaultGasPrice = 1000000000, readonly defaultGasLimit = 120000)
     {
-        super(transactionsProvider, eventsProvider, contractOwner, keyStore, jsonInterface,
+        super(transactionsProvider, eventsProvider, keyStore, jsonInterface,
             contractBinary, contractAddress, defaultGasPrice, defaultGasLimit);
     }
 
     // deploy a new web3Contract
-    deployContract(contractOwner: string, symbol = "DAD", tokenName = "Digital Australian Dollar", gasLimit = 1900000, gasPrice = 4000000000): Promise<TransactionReceipt>
+    deployContract(contractOwner: string, gasLimit = 1900000, gasPrice = 4000000000, symbol = "DAD", tokenName = "Digital Australian Dollar"): Promise<TransactionReceipt>
     {
-        return super.deployContract(contractOwner, symbol, tokenName, gasLimit, gasPrice);
+        return super.deployContract(contractOwner, gasLimit, gasPrice, symbol, tokenName);
     }
 
     // deposit an amount of tokens to an address

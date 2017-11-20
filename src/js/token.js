@@ -3,9 +3,10 @@ Object.defineProperty(exports, "__esModule", { value: true });
 const ethers_1 = require("ethers");
 const logger = require("config-logger");
 const VError = require("verror");
-const utils_1 = require("./utils");
-class Token {
-    constructor(transactionsProvider, eventsProvider, contractOwner, keyStore, jsonInterface, contractBinary, contractAddress, defaultGasPrice = 1000000000, defaultGasLimit = 120000) {
+const BaseContract_1 = require("./BaseContract");
+class Token extends BaseContract_1.default {
+    constructor(transactionsProvider, eventsProvider, keyStore, jsonInterface, contractBinary, contractAddress, defaultGasPrice = 1000000000, defaultGasLimit = 120000) {
+        super(transactionsProvider, eventsProvider, keyStore, jsonInterface, contractBinary, contractAddress, defaultGasPrice, defaultGasLimit);
         this.transactionsProvider = transactionsProvider;
         this.eventsProvider = eventsProvider;
         this.keyStore = keyStore;
@@ -14,41 +15,11 @@ class Token {
         this.defaultGasPrice = defaultGasPrice;
         this.defaultGasLimit = defaultGasLimit;
         this.transactions = {};
-        this.contractOwner = contractOwner;
         this.contract = new ethers_1.Contract(contractAddress, jsonInterface, this.transactionsProvider);
     }
     // deploy a new contract
-    deployContract(contractOwner, symbol, tokenName, gasLimit = 1900000, gasPrice = 2000000000) {
-        const self = this;
-        this.contractOwner = contractOwner;
-        const description = `deploy token with symbol ${symbol}, name "${tokenName}" from sender address ${self.contractOwner}, gas limit ${gasLimit} and gas price ${gasPrice}`;
-        return new Promise(async (resolve, reject) => {
-            logger.debug(`About to ${description}`);
-            if (!self.contractBinary) {
-                const error = new VError(`Binary for smart contract has not been set so can not ${description}.`);
-                logger.error(error.stack);
-                return reject(error);
-            }
-            try {
-                const deployTransactionData = ethers_1.Contract.getDeployTransaction(self.contractBinary, self.jsonInterface, symbol, tokenName);
-                const wallet = new ethers_1.Wallet(await self.keyStore.getPrivateKey(contractOwner), self.transactionsProvider);
-                const deployTransaction = Object.assign(deployTransactionData, {
-                    gasPrice: gasPrice,
-                    gasLimit: gasLimit
-                });
-                // Send the transaction
-                const broadcastTransaction = await wallet.sendTransaction(deployTransaction);
-                logger.debug(`${broadcastTransaction.hash} is transaction hash for ${description}`);
-                const transactionReceipt = await self.processTransaction(broadcastTransaction.hash, description, gasLimit);
-                self.contract = new ethers_1.Contract(transactionReceipt.contractAddress, self.jsonInterface, wallet);
-                resolve(transactionReceipt);
-            }
-            catch (err) {
-                const error = new VError(err, `Failed to ${description}.`);
-                logger.error(error.stack);
-                reject(error);
-            }
-        });
+    deployContract(contractOwner, gasLimit = 1900000, gasPrice = 2000000000, symbol, tokenName) {
+        return super.deployContract(contractOwner, gasLimit, gasPrice, symbol, tokenName);
     }
     // transfer an amount of tokens from one address to another
     transfer(fromAddress, toAddress, amount, gasLimit = this.defaultGasLimit, gasPrice = this.defaultGasPrice) {
@@ -145,39 +116,6 @@ class Token {
             throw error;
         }
     }
-    async getEvents(eventName, fromBlock = 0) {
-        const description = `${eventName} events from block ${fromBlock} and contract address ${this.contract.address}`;
-        const options = {
-            fromBlock: fromBlock
-        };
-        try {
-            logger.debug(`About to get ${description}`);
-            if (!this.contract.interface.events[eventName]) {
-                throw new VError(`event name ${eventName} does not exist on the contract interface`);
-            }
-            const Event = this.contract.interface.events[eventName]();
-            const logs = await this.eventsProvider.getLogs({
-                fromBlock: fromBlock,
-                toBlock: "latest",
-                address: this.contract.address,
-                topics: Event.topics
-            });
-            const events = [];
-            for (const log of logs) {
-                const event = Event.parse(log.topics, log.data);
-                // convert any Ethers.js BigNumber types to BN
-                const convertedEvent = utils_1.convertEthersBNs(event);
-                events.push(convertedEvent);
-            }
-            logger.debug(`${events.length} events successfully returned from ${description}`);
-            return events;
-        }
-        catch (err) {
-            const error = new VError(err, `Could not get ${description}`);
-            console.log(error.stack);
-            throw error;
-        }
-    }
     async getHolderBalances() {
         const description = `all token holder balances from contract address ${this.contract.address}`;
         try {
@@ -212,19 +150,6 @@ class Token {
             console.log(error.stack);
             throw error;
         }
-    }
-    async processTransaction(hash, description, gasLimit) {
-        // wait for the transaction to be mined
-        const minedTransaction = await this.transactionsProvider.waitForTransaction(hash);
-        logger.debug(`${hash} mined in block number ${minedTransaction.blockNumber} for ${description}`);
-        const rawTransactionReceipt = await this.transactionsProvider.getTransactionReceipt(hash);
-        const transactionReceipt = utils_1.convertEthersBNs(rawTransactionReceipt);
-        logger.debug(`Status ${transactionReceipt.status} and ${transactionReceipt.gasUsed} gas of ${gasLimit} used for ${description}`);
-        // If a status of 0 was returned then the transaction failed. Status 1 means the transaction worked
-        if (transactionReceipt.status == 0) {
-            throw VError(`Failed ${hash} transaction with status code ${transactionReceipt.status} and ${gasLimit} gas used.`);
-        }
-        return transactionReceipt;
     }
 }
 exports.default = Token;

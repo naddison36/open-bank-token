@@ -1,7 +1,5 @@
 import * as VError from 'verror';
 
-import {Transaction, TransactionReceipt} from "./index.d";
-
 export default class KeyStore
 {
     getPrivateKey(fromAddress: string): Promise<string>

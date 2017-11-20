@@ -1,11 +1,9 @@
+import {providers as Providers, Wallet} from 'ethers';
 import * as fs from 'fs';
 import * as BN from 'bn.js';
-import {providers as Providers, Wallet} from 'ethers';
 
 import RestrictedBankToken from '../BankToken';
 import KeyStore from '../keyStore/keyStore-hardcoded';
-
-import {TransactionReceipt} from "./index";
 
 const testContractOwner = '0xF55583FF8461DB9dfbBe90b5F3324f2A290c3356',
     depositor1 = '0x8Ae386892b59bD2A7546a9468E8e847D61955991',
@@ -25,7 +23,6 @@ describe("BankToken", ()=>
     const eventsProvider = new Providers.JsonRpcProvider("http://localhost:8646", true, 0);  // ChainId 100 = 0x64
 
     const bankToken = new RestrictedBankToken(transactionsProvider, eventsProvider,
-        testContractOwner,
         new KeyStore(),
         jsonInterface,
         contractBinary,
@@ -53,7 +50,7 @@ describe("BankToken", ()=>
         {
             expect.assertions(4);
 
-            const txReceipt = await bankToken.deployContract(testContractOwner, "Test", "Test name");
+            const txReceipt = await bankToken.deployContract(testContractOwner, 2000000, 2000000000,"Test", "Test name");
 
             expect(txReceipt.contractAddress).toHaveLength(42);
 
@@ -79,7 +76,7 @@ describe("BankToken", ()=>
             expect(await bankToken.getBalanceOf(depositor1)).toMatchObject(new BN(0));
             expect(await bankToken.getBalanceOf(depositor2)).toMatchObject(new BN(0));
 
-            const events = await bankToken.getEvents('Deposit', 0);
+            const events = await bankToken.getEvents('Deposit', 1);
             expect(events).toHaveLength(0);
         }, 30000);
 
@@ -103,7 +100,7 @@ describe("BankToken", ()=>
         {
             expect.assertions(5);
 
-            const events = await bankToken.getEvents('Deposit', 0);
+            const events = await bankToken.getEvents('Deposit', 2);
 
             expect(events).toHaveLength(1);
             expect(events[0].toAddress).toEqual(depositor1);
@@ -221,11 +218,9 @@ describe("BankToken", ()=>
             const differentOwnerBankToken = new RestrictedBankToken(
                 transactionsProvider,
                 eventsProvider,
-                depositor1, // different contract owner
                 new KeyStore(),
                 jsonInterface,
-                contractBinary,
-                bankToken.contractOwner
+                contractBinary
             );
 
             try {
@@ -562,7 +557,7 @@ describe("BankToken", ()=>
             const signedTransaction = wallet.sign({
                 to: bankToken.contract.address,  // the target address
                 nonce: await transactionsProvider.getTransactionCount(wallet.address, "latest"),           // the transaction nonce
-                gasLimit: 120000,        // the maximum gas this transaction may spend
+                gasLimit: 22000,        // the maximum gas this transaction may spend
                 gasPrice: 1000000000,        // the price (in wei) per unit of gas
                 value: 1,           // the amount (in wei) this transaction is sending
                 chainId: transactionsProvider.chainId          // the network ID; usually added by a signer

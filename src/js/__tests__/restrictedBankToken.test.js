@@ -1,8 +1,8 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
+const ethers_1 = require("ethers");
 const fs = require("fs");
 const BN = require("bn.js");
-const ethers_1 = require("ethers");
 const BankToken_1 = require("../BankToken");
 const keyStore_hardcoded_1 = require("../keyStore/keyStore-hardcoded");
 const testContractOwner = '0xF55583FF8461DB9dfbBe90b5F3324f2A290c3356', depositor1 = '0x8Ae386892b59bD2A7546a9468E8e847D61955991', depositor2 = '0x0013a861865d784d97c57e70814b13ba94713d4e', depositor3 = '0xD9D72D466637e8408BB3B17d3ff6DB02e8BeBf27';
@@ -13,7 +13,7 @@ describe("BankToken", () => {
     const contractBinary = '0x' + fs.readFileSync(bankTokenBinaryFile, 'utf8');
     const transactionsProvider = new ethers_1.providers.JsonRpcProvider("http://localhost:8646", true, 0); // ChainId 100 = 0x64
     const eventsProvider = new ethers_1.providers.JsonRpcProvider("http://localhost:8646", true, 0); // ChainId 100 = 0x64
-    const bankToken = new BankToken_1.default(transactionsProvider, eventsProvider, testContractOwner, new keyStore_hardcoded_1.default(), jsonInterface, contractBinary, null // contract address
+    const bankToken = new BankToken_1.default(transactionsProvider, eventsProvider, new keyStore_hardcoded_1.default(), jsonInterface, contractBinary, null // contract address
     );
     describe("Deploy contract", () => {
         test('with default arguments', async () => {
@@ -27,7 +27,7 @@ describe("BankToken", () => {
         }, 60000);
         test('with specified arguments', async () => {
             expect.assertions(4);
-            const txReceipt = await bankToken.deployContract(testContractOwner, "Test", "Test name");
+            const txReceipt = await bankToken.deployContract(testContractOwner, 2000000, 2000000000, "Test", "Test name");
             expect(txReceipt.contractAddress).toHaveLength(42);
             expect(await bankToken.getSymbol()).toEqual('Test');
             expect(await bankToken.getName()).toEqual('Test name');
@@ -43,7 +43,7 @@ describe("BankToken", () => {
             expect(await bankToken.getTotalSupply()).toMatchObject(new BN(0));
             expect(await bankToken.getBalanceOf(depositor1)).toMatchObject(new BN(0));
             expect(await bankToken.getBalanceOf(depositor2)).toMatchObject(new BN(0));
-            const events = await bankToken.getEvents('Deposit', 0);
+            const events = await bankToken.getEvents('Deposit', 1);
             expect(events).toHaveLength(0);
         }, 30000);
         test("to first token holder", async () => {
@@ -58,7 +58,7 @@ describe("BankToken", () => {
         }, 30000);
         test("get event from first deposit", async () => {
             expect.assertions(5);
-            const events = await bankToken.getEvents('Deposit', 0);
+            const events = await bankToken.getEvents('Deposit', 2);
             expect(events).toHaveLength(1);
             expect(events[0].toAddress).toEqual(depositor1);
             expect(events[0].amount).toEqual(new BN(100));
@@ -137,8 +137,7 @@ describe("BankToken", () => {
         }, 40000);
         test("to first token holder but not as the contract owner", async () => {
             expect.assertions(3);
-            const differentOwnerBankToken = new BankToken_1.default(transactionsProvider, eventsProvider, depositor1, // different contract owner
-            new keyStore_hardcoded_1.default(), jsonInterface, contractBinary, bankToken.contractOwner);
+            const differentOwnerBankToken = new BankToken_1.default(transactionsProvider, eventsProvider, new keyStore_hardcoded_1.default(), jsonInterface, contractBinary);
             try {
                 await differentOwnerBankToken.deposit(depositor1, 30, '111', '10004');
             }
@@ -370,7 +369,7 @@ describe("BankToken", () => {
             const signedTransaction = wallet.sign({
                 to: bankToken.contract.address,
                 nonce: await transactionsProvider.getTransactionCount(wallet.address, "latest"),
-                gasLimit: 120000,
+                gasLimit: 22000,
                 gasPrice: 1000000000,
                 value: 1,
                 chainId: transactionsProvider.chainId // the network ID; usually added by a signer

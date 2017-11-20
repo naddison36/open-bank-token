@@ -105,7 +105,7 @@ contract RestrictedBankToken is ERC20Token
         _;
     }
 
-    // Issue takens after cash has been deposited into the bank account
+    // Issue tokens after cash has been deposited into the bank account
     function deposit(address toAddress, uint256 amount, string externalId, string bankTransactionId) public
         onlyOwner()
         maxTokens(toAddress, amount)

@@ -1,12 +1,12 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
+const ethers_1 = require("ethers");
 const VError = require("verror");
 const logger = require("config-logger");
-const ethers_1 = require("ethers");
 const token_1 = require("./token");
 class BankToken extends token_1.default {
-    constructor(transactionsProvider, eventsProvider, contractOwner, keyStore, jsonInterface, contractBinary, contractAddress, defaultGasPrice = 1000000000, defaultGasLimit = 120000) {
-        super(transactionsProvider, eventsProvider, contractOwner, keyStore, jsonInterface, contractBinary, contractAddress, defaultGasPrice, defaultGasLimit);
+    constructor(transactionsProvider, eventsProvider, keyStore, jsonInterface, contractBinary, contractAddress, defaultGasPrice = 1000000000, defaultGasLimit = 120000) {
+        super(transactionsProvider, eventsProvider, keyStore, jsonInterface, contractBinary, contractAddress, defaultGasPrice, defaultGasLimit);
         this.transactionsProvider = transactionsProvider;
         this.eventsProvider = eventsProvider;
         this.keyStore = keyStore;
@@ -14,8 +14,8 @@ class BankToken extends token_1.default {
         this.defaultGasLimit = defaultGasLimit;
     }
     // deploy a new web3Contract
-    deployContract(contractOwner, symbol = "DAD", tokenName = "Digital Australian Dollar", gasLimit = 1900000, gasPrice = 4000000000) {
-        return super.deployContract(contractOwner, symbol, tokenName, gasLimit, gasPrice);
+    deployContract(contractOwner, gasLimit = 1900000, gasPrice = 4000000000, symbol = "DAD", tokenName = "Digital Australian Dollar") {
+        return super.deployContract(contractOwner, gasLimit, gasPrice, symbol, tokenName);
     }
     // deposit an amount of tokens to an address
     deposit(toAddress, amount, externalId, bankTransactionId, gasLimit = this.defaultGasLimit, gasPrice = this.defaultGasPrice) {
