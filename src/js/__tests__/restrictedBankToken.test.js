@@ -241,7 +241,7 @@ describe("BankToken", () => {
         test("request withdraw when no tokens", async () => {
             expect.assertions(3);
             try {
-                await bankToken.requestWithdrawal(depositor3, 100);
+                await bankToken.requestWithdrawal(100, { txSignerAddress: depositor3 });
             }
             catch (err) {
                 expect(err instanceof Error).toBeTruthy();
@@ -252,7 +252,7 @@ describe("BankToken", () => {
         test("request withdraw too much", async () => {
             expect.assertions(4);
             try {
-                await bankToken.requestWithdrawal(depositor1, 1001);
+                await bankToken.requestWithdrawal(1001, { txSignerAddress: depositor1 });
             }
             catch (err) {
                 expect(err instanceof Error).toBeTruthy();
@@ -265,7 +265,7 @@ describe("BankToken", () => {
             expect.assertions(6);
             const preWithdrawalCounter = await bankToken.getWithdrawalCounter();
             expect(preWithdrawalCounter.toNumber()).toEqual(0);
-            const txReceipt = await bankToken.requestWithdrawal(depositor1, 100);
+            const txReceipt = await bankToken.requestWithdrawal(100, { txSignerAddress: depositor1 });
             expect(txReceipt.transactionHash).toHaveLength(66);
             expect(await bankToken.getBalanceOf(depositor1)).toMatchObject(new BN(900));
             expect(await bankToken.getBalanceOf(depositor2)).toMatchObject(new BN(1000));
@@ -318,7 +318,7 @@ describe("BankToken", () => {
             expect(depositTxReceipt.transactionHash).toHaveLength(66);
             const transferTxReceipt = await bankToken.transfer(depositor1, depositor3, 99);
             expect(transferTxReceipt.transactionHash).toHaveLength(66);
-            const withdrawalTxReceipt = await bankToken.requestWithdrawal(depositor1, 100);
+            const withdrawalTxReceipt = await bankToken.requestWithdrawal(100, { txSignerAddress: depositor1 });
             expect(withdrawalTxReceipt.transactionHash).toHaveLength(66);
             expect(await bankToken.getBalanceOf(depositor1)).toMatchObject(new BN(701));
             expect(await bankToken.getBalanceOf(depositor2)).toMatchObject(new BN(1000));

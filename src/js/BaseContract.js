@@ -5,14 +5,16 @@ const VError = require("verror");
 const logger = require("config-logger");
 const fs_1 = require("fs");
 class BaseContract {
-    constructor(transactionsProvider, eventsProvider, keyStore, jsonInterface, contractBinary, contractAddress, defaultGasPrice = 1000000000, defaultGasLimit = 120000) {
+    constructor(transactionsProvider, eventsProvider, keyStore, jsonInterface, contractBinary, contractAddress, defaultSendOptions = {
+            gasPrice: 1000000000,
+            gasLimit: 120000
+        }) {
         this.transactionsProvider = transactionsProvider;
         this.eventsProvider = eventsProvider;
         this.keyStore = keyStore;
         this.jsonInterface = jsonInterface;
         this.contractBinary = contractBinary;
-        this.defaultGasPrice = defaultGasPrice;
-        this.defaultGasLimit = defaultGasLimit;
+        this.defaultSendOptions = defaultSendOptions;
         this.contract = new ethers_1.Contract(contractAddress, jsonInterface, this.transactionsProvider);
     }
     // deploy a new contract
@@ -39,6 +41,50 @@ class BaseContract {
                 logger.debug(`${broadcastTransaction.hash} is transaction hash for ${description}`);
                 const transactionReceipt = await self.processTransaction(broadcastTransaction.hash, description, gasLimit);
                 self.contract = new ethers_1.Contract(transactionReceipt.contractAddress, self.jsonInterface, wallet);
+                resolve(transactionReceipt);
+            }
+            catch (err) {
+                const error = new VError(err, `Failed to ${description}.`);
+                logger.error(error.stack);
+                reject(error);
+            }
+        });
+    }
+    async call(functionName, ...callParams) {
+        const description = `Call function ${functionName} with params ${callParams.toString()} on contract with address ${this.contract.address}`;
+        try {
+            const result = await this.contract[functionName](...callParams);
+            logger.info(`Got ${result[0]} ${description}`);
+            return result[0];
+        }
+        catch (err) {
+            const error = new VError(err, `Could not get ${description}`);
+            logger.error(error.stack);
+            throw error;
+        }
+    }
+    async send(functionName, overrideSendOptions, ...callParams) {
+        const self = this;
+        let sendOptions = this.defaultSendOptions;
+        if (overrideSendOptions) {
+            sendOptions = {
+                gasPrice: overrideSendOptions.gasPrice || this.defaultSendOptions.gasPrice,
+                gasLimit: overrideSendOptions.gasLimit || this.defaultSendOptions.gasLimit
+            };
+        }
+        const description = `send transaction to function ${functionName} with parameters ${callParams}, gas limit ${sendOptions.gasLimit} and gas price ${sendOptions.gasPrice} on contract with address ${this.contract.address}`;
+        return new Promise(async (resolve, reject) => {
+            try {
+                let contract = self.contract;
+                if (overrideSendOptions && overrideSendOptions.txSignerAddress) {
+                    const privateKey = await self.keyStore.getPrivateKey(overrideSendOptions.txSignerAddress);
+                    const wallet = new ethers_1.Wallet(privateKey, self.transactionsProvider);
+                    contract = new ethers_1.Contract(self.contract.address, self.jsonInterface, wallet);
+                }
+                // send the transaction
+                const broadcastTransaction = await contract[functionName](...callParams, sendOptions);
+                logger.debug(`${broadcastTransaction.hash} is transaction hash and nonce ${broadcastTransaction.nonce} for ${description}`);
+                const transactionReceipt = await self.processTransaction(broadcastTransaction.hash, description, sendOptions.gasLimit);
                 resolve(transactionReceipt);
             }
             catch (err) {

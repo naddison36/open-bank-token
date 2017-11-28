@@ -1,7 +1,9 @@
 {
   "config": {
-    "homesteadBlock": 1,
-    "byzantiumBlock": 12
+    "homesteadBlock": 0,
+    "byzantiumBlock": 0,
+    "eip155Block": 0,
+    "eip158Block": 0
   },
   "nonce": "0",
   "difficulty": "0x300",

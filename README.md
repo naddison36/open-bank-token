@@ -15,22 +15,22 @@ When an asset is traded it is usually traded for a currency. Tokenised assets ca
 ## Why not use traditional payments?
 Programmable money is adding conditions to when money can be sent, who is can be sent to and the amount sent. It's also being able to exchange digital assets with digital money is atomic transactions which resolves a lot of delivery versus payment problems. For a more detailed explanation and example uses cases see [programmable money](https://github.com/naddison36/ethereum-programmable-money).
 
-## Benefits
-### Consumers
+# Benefits of the Open Bank Token
+## Consumers
 For this experiment, the consumers are members of the Sydney Ethereum community who can learn about how tokens can be issued, transferred and redeemed. They can also learn which wallets are the best to use, how to secure their private keys and how to check their transactions on the public chain.
 
-### FinTechs
+## FinTechs
 The concept of programmable money is an attractive one for FinTechs as it opens up a financial infrastructure that they can create innovative, new services for their customers. Escrow, automated asset transfers, faster direct debits and atomic execution of deals are all possible with programmable money. 
 
-### Banks
+## Banks
 Deposits are the main benefit to the bank which is the cheapest form of funding for the banks lending businesses. The best example is Tether's USDT which has around USD 440m at the time of writing.
 
 There are also reputation gains to be had by being seen as innovative. From an investors perspective, innovative banks are more resistant to the digital disruption that is currently underway.
 
-### Regulators
+## Regulators
 Blockchain technology is rapidly developing around the world, so it's essential that regulators are across these developments to protect consumers and the financial systems they regulate. It's also important for Australia to remain competitive in the emerging financial technology space to attract investment and build economic activity. By learning from experiments like this, regulators can ensure Australia has the policies and laws in place that make it a world-leading regulatory environment.
 
-# What
+# What is the Open Bank Token
 The Ethereum token will be an ERC20 compliant token that can have tokens deposited and withdrawn. These deposits and withdrawals will be linked to an Australian bank account.
 
 ## Project principles

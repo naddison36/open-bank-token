@@ -7,6 +7,12 @@ import {readFileSync} from 'fs';
 import {KeyStore} from './keyStore/index.d';
 import {TransactionReceipt} from './index';
 
+export interface SendOptions {
+    gasLimit?: number,
+    gasPrice?: number,
+    txSignerAddress?: string    // address that will sign the transaction. Defaults to the contract owner
+}
+
 export default class BaseContract
 {
     contract: object;
@@ -15,7 +21,9 @@ export default class BaseContract
                 readonly keyStore: KeyStore,
                 readonly jsonInterface: object[], readonly contractBinary?: string,
                 contractAddress?: string,
-                readonly defaultGasPrice = 1000000000, readonly defaultGasLimit = 120000)
+                readonly defaultSendOptions: SendOptions = {
+                    gasPrice: 1000000000,
+                    gasLimit: 120000})
     {
         this.contract = new Contract(contractAddress, jsonInterface, this.transactionsProvider);
     }
@@ -63,6 +71,72 @@ export default class BaseContract
             }
             catch (err)
             {
+                const error = new VError(err, `Failed to ${description}.`);
+                logger.error(error.stack);
+                reject(error);
+            }
+        });
+    }
+
+
+    async call(functionName: string, ...callParams: any[])
+    {
+        const description = `Call function ${functionName} with params ${callParams.toString()} on contract with address ${this.contract.address}`;
+
+        try
+        {
+            const result = await this.contract[functionName](...callParams);
+
+            logger.info(`Got ${result[0]} ${description}`);
+            return result[0];
+        }
+        catch (err)
+        {
+            const error = new VError(err, `Could not get ${description}`);
+            logger.error(error.stack);
+            throw error;
+        }
+    }
+
+    async send(functionName: string, overrideSendOptions?: SendOptions, ...callParams: any[]): Promise<TransactionReceipt>
+    {
+        const self = this;
+
+        let sendOptions: SendOptions = this.defaultSendOptions;
+
+        if (overrideSendOptions)
+        {
+            sendOptions = {
+                gasPrice: overrideSendOptions.gasPrice || this.defaultSendOptions.gasPrice,
+                gasLimit: overrideSendOptions.gasLimit || this.defaultSendOptions.gasLimit
+            };
+        }
+
+        const description = `send transaction to function ${functionName} with parameters ${callParams}, gas limit ${sendOptions.gasLimit} and gas price ${sendOptions.gasPrice} on contract with address ${this.contract.address}`;
+
+        return new Promise<TransactionReceipt>(async (resolve, reject) =>
+        {
+            try
+            {
+                let contract: Contract = self.contract;
+
+                if (overrideSendOptions && overrideSendOptions.txSignerAddress)
+                {
+                    const privateKey = await self.keyStore.getPrivateKey(overrideSendOptions.txSignerAddress);
+                    const wallet = new Wallet(privateKey, self.transactionsProvider);
+                    contract = new Contract(self.contract.address, self.jsonInterface, wallet);
+                }
+
+                // send the transaction
+                const broadcastTransaction = await contract[functionName](...callParams, sendOptions);
+
+                logger.debug(`${broadcastTransaction.hash} is transaction hash and nonce ${broadcastTransaction.nonce} for ${description}`);
+
+                const transactionReceipt = await self.processTransaction(broadcastTransaction.hash, description, sendOptions.gasLimit);
+
+                resolve(transactionReceipt);
+            }
+            catch (err) {
                 const error = new VError(err, `Failed to ${description}.`);
                 logger.error(error.stack);
                 reject(error);
