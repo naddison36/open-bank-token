@@ -1,7 +1,5 @@
 import {provider as Provider,
     Wallet, Contract} from 'ethers';
-import * as VError from 'verror';
-import * as logger from 'config-logger';
 import * as BN from 'bn.js';
 
 import Token from './Token';

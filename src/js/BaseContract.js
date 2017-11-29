@@ -20,7 +20,7 @@ class BaseContract {
     // deploy a new contract
     deployContract(contractOwner, gasLimit, gasPrice, ...contractConstructorParams) {
         const self = this;
-        const description = `deploy contract from sender address ${contractOwner}, gas limit ${gasLimit} and gas price ${gasPrice}`;
+        const description = `deploy contract from sender address ${contractOwner} with params ${contractConstructorParams.toString()}, gas limit ${gasLimit} and gas price ${gasPrice}.`;
         return new Promise(async (resolve, reject) => {
             logger.debug(`About to ${description}`);
             if (!self.contractBinary) {

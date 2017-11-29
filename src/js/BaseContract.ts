@@ -33,7 +33,7 @@ export default class BaseContract
     {
         const self = this;
 
-        const description = `deploy contract from sender address ${contractOwner}, gas limit ${gasLimit} and gas price ${gasPrice}`;
+        const description = `deploy contract from sender address ${contractOwner} with params ${contractConstructorParams.toString()}, gas limit ${gasLimit} and gas price ${gasPrice}.`;
 
         return new Promise<TransactionReceipt>(async (resolve, reject) =>
         {
@@ -78,17 +78,25 @@ export default class BaseContract
         });
     }
 
-
-    async call(functionName: string, ...callParams: any[])
+    async call(functionName: string, ...callParams: any[]): Promise<any>
     {
         const description = `Call function ${functionName} with params ${callParams.toString()} on contract with address ${this.contract.address}`;
 
         try
         {
-            const result = await this.contract[functionName](...callParams);
+            const results = await this.contract[functionName](...callParams);
 
-            logger.info(`Got ${result[0]} ${description}`);
-            return result[0];
+            let result = results[0];
+
+            // if an Ethers BigNumber
+            if (results[0]._bn)
+            {
+                // convert to a bn.js BigNumber
+                result = results[0]._bn;
+            }
+            
+            logger.info(`Got ${result} ${description}`);
+            return result;
         }
         catch (err)
         {
@@ -102,8 +110,9 @@ export default class BaseContract
     {
         const self = this;
 
-        let sendOptions: SendOptions = this.defaultSendOptions;
-
+        // clone the default options
+        let sendOptions: SendOptions = {...this.defaultSendOptions};
+        
         if (overrideSendOptions)
         {
             sendOptions = {
