@@ -1,48 +1,49 @@
-import {provider as Provider,
-    Wallet, Contract} from 'ethers';
+import {provider as Provider, Wallet, Contract} from 'ethers';
 import * as VError from 'verror';
 import * as logger from 'config-logger';
 import {readFileSync} from 'fs';
 
-import {KeyStore} from './keyStore/index.d';
 import {TransactionReceipt} from './index';
+import {SignerConstructor} from './signers';
 
 export interface SendOptions {
     gasLimit?: number,
     gasPrice?: number,
-    txSignerAddress?: string    // address that will sign the transaction. Defaults to the contract owner
+    value?: string
 }
 
 export default class BaseContract
 {
     contract: object;
+    contractOwner: string;
 
-    constructor(readonly transactionsProvider: Provider, readonly eventsProvider: Provider,
-                readonly keyStore: KeyStore,
-                readonly jsonInterface: object[], readonly contractBinary?: string,
+    constructor(protected transactionsProvider: Provider, protected eventsProvider: Provider,
+                protected Signer: SignerConstructor,
+                protected jsonInterface: object[], protected contractBinary?: string,
                 contractAddress?: string,
                 readonly defaultSendOptions: SendOptions = {
                     gasPrice: 1000000000,
-                    gasLimit: 120000})
+                    gasLimit: 1200000})
     {
         if (contractAddress)
         {
-            this.contract = new Contract(contractAddress, jsonInterface, this.transactionsProvider);
+            this.contract = new Contract(contractAddress, jsonInterface, transactionsProvider);
         }
     }
 
     // deploy a new contract
-    deployContract(contractOwner: string, gasLimit: number, gasPrice: number, ...contractConstructorParams: any[]): Promise<TransactionReceipt>
+    deployContract(contractOwner: string, overrideSendOptions?: SendOptions, ...contractConstructorParams: any[]): Promise<TransactionReceipt>
     {
-        const self = this;
+        // override the default send options
+        const sendOptions = Object.assign({}, this.defaultSendOptions, overrideSendOptions);
 
-        const description = `deploy contract from sender address ${contractOwner} with params ${contractConstructorParams.toString()}, gas limit ${gasLimit} and gas price ${gasPrice}.`;
+        const description = `deploy contract with params ${contractConstructorParams.toString()}, from sender address ${contractOwner}, gas limit ${sendOptions.gasLimit} and gas price ${sendOptions.gasPrice}.`;
 
         return new Promise<TransactionReceipt>(async (resolve, reject) =>
         {
             logger.debug(`About to ${description}`);
 
-            if (!self.contractBinary) {
+            if (!this.contractBinary) {
                 const error = new VError(`Binary for smart contract has not been set so can not ${description}.`);
                 logger.error(error.stack);
                 return reject(error);
@@ -50,25 +51,33 @@ export default class BaseContract
 
             try
             {
-                const deployTransactionData = Contract.getDeployTransaction(self.contractBinary, self.jsonInterface, ...contractConstructorParams);
+                this.contractOwner = contractOwner;
 
-                const privateKey = await self.keyStore.getPrivateKey(contractOwner);
+                const deployTransactionData = Contract.getDeployTransaction(this.contractBinary, this.jsonInterface, ...contractConstructorParams);
 
-                const wallet = new Wallet(privateKey, self.transactionsProvider);
+                const signer = new this.Signer(contractOwner, this.transactionsProvider);
 
-                const deployTransaction = Object.assign(deployTransactionData, {
-                    gasPrice: gasPrice,
-                    gasLimit: gasLimit
+                const deployTransaction = Object.assign(deployTransactionData, sendOptions, {
+                    nonce: await this.transactionsProvider.getTransactionCount(contractOwner)
                 });
 
-                // Send the transaction
-                const broadcastTransaction = await wallet.sendTransaction(deployTransaction);
+                const signedTransaction = await signer.sign(deployTransaction);
 
-                logger.debug(`${broadcastTransaction.hash} is transaction hash for ${description}`);
+                // Send the signed transaction
+                let txHash = await this.transactionsProvider.sendTransaction(signedTransaction);
 
-                const transactionReceipt = await self.processTransaction(broadcastTransaction.hash, description, gasLimit);
+                // if the signer was a Wallet then the hash is in an object
+                if (txHash.hash) {
+                    txHash = txHash.hash;
+                }
 
-                self.contract = new Contract(transactionReceipt.contractAddress, self.jsonInterface, wallet);
+                logger.debug(`${txHash} is transaction hash for ${description}`);
+
+                const transactionReceipt = await this.processTransaction(txHash, description, deployTransaction.gasLimit);
+
+                this.contract = new Contract(transactionReceipt.contractAddress, this.jsonInterface, signer);
+
+                logger.info(`${this.contract.address} created from ${description}`);
 
                 resolve(transactionReceipt);
             }
@@ -83,7 +92,7 @@ export default class BaseContract
 
     async call(functionName: string, ...callParams: any[]): Promise<any>
     {
-        const description = `Call function ${functionName} with params ${callParams.toString()} on contract with address ${this.contract.address}`;
+        const description = `calling function ${functionName} with params ${callParams.toString()} on contract with address ${this.contract.address}`;
 
         try
         {
@@ -97,8 +106,8 @@ export default class BaseContract
                 // convert to a bn.js BigNumber
                 result = results[0]._bn;
             }
-            
-            logger.info(`Got ${result} ${description}`);
+
+            logger.info(`Got ${result} from ${description}`);
             return result;
         }
         catch (err)
@@ -109,42 +118,36 @@ export default class BaseContract
         }
     }
 
-    async send(functionName: string, overrideSendOptions?: SendOptions, ...callParams: any[]): Promise<TransactionReceipt>
+    async send(functionName: string, txSignerAddress?: string, overrideSendOptions?: SendOptions, ...callParams: any[]): Promise<TransactionReceipt>
     {
-        const self = this;
+        // override the default send options
+        const sendOptions = Object.assign({}, this.defaultSendOptions, overrideSendOptions);
 
-        // clone the default options
-        let sendOptions: SendOptions = {...this.defaultSendOptions};
-        
-        if (overrideSendOptions)
-        {
-            sendOptions = {
-                gasPrice: overrideSendOptions.gasPrice || this.defaultSendOptions.gasPrice,
-                gasLimit: overrideSendOptions.gasLimit || this.defaultSendOptions.gasLimit
-            };
-        }
-
-        const description = `send transaction to function ${functionName} with parameters ${callParams}, gas limit ${sendOptions.gasLimit} and gas price ${sendOptions.gasPrice} on contract with address ${this.contract.address}`;
+        const description = `send transaction to function ${functionName} with transaction signer ${txSignerAddress}, parameters ${callParams}, gas limit ${sendOptions.gasLimit} and gas price ${sendOptions.gasPrice} on contract with address ${this.contract.address}`;
 
         return new Promise<TransactionReceipt>(async (resolve, reject) =>
         {
             try
             {
-                let contract: Contract = self.contract;
+                let contract: Contract = this.contract;
 
-                if (overrideSendOptions && overrideSendOptions.txSignerAddress)
+                if (txSignerAddress)
                 {
-                    const privateKey = await self.keyStore.getPrivateKey(overrideSendOptions.txSignerAddress);
-                    const wallet = new Wallet(privateKey, self.transactionsProvider);
-                    contract = new Contract(self.contract.address, self.jsonInterface, wallet);
+                    const signer = new this.Signer(txSignerAddress, this.transactionsProvider);
+                    contract = new Contract(this.contract.address, this.jsonInterface, signer);
                 }
 
                 // send the transaction
-                const broadcastTransaction = await contract[functionName](...callParams, sendOptions);
+                let txHash = await contract[functionName](...callParams, sendOptions);
 
-                logger.debug(`${broadcastTransaction.hash} is transaction hash and nonce ${broadcastTransaction.nonce} for ${description}`);
+                // if the signer was a Wallet then the hash is in an object
+                if (txHash.hash) {
+                    txHash = txHash.hash;
+                }
 
-                const transactionReceipt = await self.processTransaction(broadcastTransaction.hash, description, sendOptions.gasLimit);
+                logger.debug(`${txHash} is transaction hash for ${description}`);
+
+                const transactionReceipt = await this.processTransaction(txHash, description, sendOptions.gasLimit);
 
                 resolve(transactionReceipt);
             }
@@ -171,7 +174,10 @@ export default class BaseContract
 
         // If a status of 0 was returned then the transaction failed. Status 1 means the transaction worked
         if (transactionReceipt.status == 0) {
-            throw VError(`Failed ${hash} transaction with status code ${transactionReceipt.status}. ${transactionReceipt.gasUsed} gas used of ${gasLimit} gas limit.`);
+            const error = new VError(`Failed transaction ${hash} with status code ${transactionReceipt.status}. ${transactionReceipt.gasUsed} gas used of ${gasLimit} gas limit.`);
+            error.txReceipt = transactionReceipt;
+            logger.error(error.stack);
+            throw error;
         }
 
         return transactionReceipt;
@@ -246,14 +252,14 @@ export default class BaseContract
         }
     }
 
-    static loadJsonInterfaceFromFile(filename: string): object[] {
-
-        const jsonInterfaceStr = readFileSync(filename, 'utf8');
+    static loadJsonInterfaceFromFile(filename: string): object[]
+    {
+        const jsonInterfaceStr = readFileSync(filename + ".abi", 'utf8');
         return JSON.parse(jsonInterfaceStr);
     }
 
     static loadBinaryFromFile(filename: string): string
     {
-        return '0x' + readFileSync(filename, 'utf8');
+        return '0x' + readFileSync(filename + ".bin", 'utf8');
     }
 }

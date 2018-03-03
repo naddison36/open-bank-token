@@ -5,44 +5,50 @@ const VError = require("verror");
 const logger = require("config-logger");
 const fs_1 = require("fs");
 class BaseContract {
-    constructor(transactionsProvider, eventsProvider, keyStore, jsonInterface, contractBinary, contractAddress, defaultSendOptions = {
+    constructor(transactionsProvider, eventsProvider, Signer, jsonInterface, contractBinary, contractAddress, defaultSendOptions = {
             gasPrice: 1000000000,
-            gasLimit: 120000
+            gasLimit: 1200000
         }) {
         this.transactionsProvider = transactionsProvider;
         this.eventsProvider = eventsProvider;
-        this.keyStore = keyStore;
+        this.Signer = Signer;
         this.jsonInterface = jsonInterface;
         this.contractBinary = contractBinary;
         this.defaultSendOptions = defaultSendOptions;
         if (contractAddress) {
-            this.contract = new ethers_1.Contract(contractAddress, jsonInterface, this.transactionsProvider);
+            this.contract = new ethers_1.Contract(contractAddress, jsonInterface, transactionsProvider);
         }
     }
     // deploy a new contract
-    deployContract(contractOwner, gasLimit, gasPrice, ...contractConstructorParams) {
-        const self = this;
-        const description = `deploy contract from sender address ${contractOwner} with params ${contractConstructorParams.toString()}, gas limit ${gasLimit} and gas price ${gasPrice}.`;
+    deployContract(contractOwner, overrideSendOptions, ...contractConstructorParams) {
+        // override the default send options
+        const sendOptions = Object.assign({}, this.defaultSendOptions, overrideSendOptions);
+        const description = `deploy contract with params ${contractConstructorParams.toString()}, from sender address ${contractOwner}, gas limit ${sendOptions.gasLimit} and gas price ${sendOptions.gasPrice}.`;
         return new Promise(async (resolve, reject) => {
             logger.debug(`About to ${description}`);
-            if (!self.contractBinary) {
+            if (!this.contractBinary) {
                 const error = new VError(`Binary for smart contract has not been set so can not ${description}.`);
                 logger.error(error.stack);
                 return reject(error);
             }
             try {
-                const deployTransactionData = ethers_1.Contract.getDeployTransaction(self.contractBinary, self.jsonInterface, ...contractConstructorParams);
-                const privateKey = await self.keyStore.getPrivateKey(contractOwner);
-                const wallet = new ethers_1.Wallet(privateKey, self.transactionsProvider);
-                const deployTransaction = Object.assign(deployTransactionData, {
-                    gasPrice: gasPrice,
-                    gasLimit: gasLimit
+                this.contractOwner = contractOwner;
+                const deployTransactionData = ethers_1.Contract.getDeployTransaction(this.contractBinary, this.jsonInterface, ...contractConstructorParams);
+                const signer = new this.Signer(contractOwner, this.transactionsProvider);
+                const deployTransaction = Object.assign(deployTransactionData, sendOptions, {
+                    nonce: await this.transactionsProvider.getTransactionCount(contractOwner)
                 });
-                // Send the transaction
-                const broadcastTransaction = await wallet.sendTransaction(deployTransaction);
-                logger.debug(`${broadcastTransaction.hash} is transaction hash for ${description}`);
-                const transactionReceipt = await self.processTransaction(broadcastTransaction.hash, description, gasLimit);
-                self.contract = new ethers_1.Contract(transactionReceipt.contractAddress, self.jsonInterface, wallet);
+                const signedTransaction = await signer.sign(deployTransaction);
+                // Send the signed transaction
+                let txHash = await this.transactionsProvider.sendTransaction(signedTransaction);
+                // if the signer was a Wallet then the hash is in an object
+                if (txHash.hash) {
+                    txHash = txHash.hash;
+                }
+                logger.debug(`${txHash} is transaction hash for ${description}`);
+                const transactionReceipt = await this.processTransaction(txHash, description, deployTransaction.gasLimit);
+                this.contract = new ethers_1.Contract(transactionReceipt.contractAddress, this.jsonInterface, signer);
+                logger.info(`${this.contract.address} created from ${description}`);
                 resolve(transactionReceipt);
             }
             catch (err) {
@@ -53,7 +59,7 @@ class BaseContract {
         });
     }
     async call(functionName, ...callParams) {
-        const description = `Call function ${functionName} with params ${callParams.toString()} on contract with address ${this.contract.address}`;
+        const description = `calling function ${functionName} with params ${callParams.toString()} on contract with address ${this.contract.address}`;
         try {
             const results = await this.contract[functionName](...callParams);
             let result = results[0];
@@ -62,7 +68,7 @@ class BaseContract {
                 // convert to a bn.js BigNumber
                 result = results[0]._bn;
             }
-            logger.info(`Got ${result} ${description}`);
+            logger.info(`Got ${result} from ${description}`);
             return result;
         }
         catch (err) {
@@ -71,29 +77,25 @@ class BaseContract {
             throw error;
         }
     }
-    async send(functionName, overrideSendOptions, ...callParams) {
-        const self = this;
-        // clone the default options
-        let sendOptions = Object.assign({}, this.defaultSendOptions);
-        if (overrideSendOptions) {
-            sendOptions = {
-                gasPrice: overrideSendOptions.gasPrice || this.defaultSendOptions.gasPrice,
-                gasLimit: overrideSendOptions.gasLimit || this.defaultSendOptions.gasLimit
-            };
-        }
-        const description = `send transaction to function ${functionName} with parameters ${callParams}, gas limit ${sendOptions.gasLimit} and gas price ${sendOptions.gasPrice} on contract with address ${this.contract.address}`;
+    async send(functionName, txSignerAddress, overrideSendOptions, ...callParams) {
+        // override the default send options
+        const sendOptions = Object.assign({}, this.defaultSendOptions, overrideSendOptions);
+        const description = `send transaction to function ${functionName} with transaction signer ${txSignerAddress}, parameters ${callParams}, gas limit ${sendOptions.gasLimit} and gas price ${sendOptions.gasPrice} on contract with address ${this.contract.address}`;
         return new Promise(async (resolve, reject) => {
             try {
-                let contract = self.contract;
-                if (overrideSendOptions && overrideSendOptions.txSignerAddress) {
-                    const privateKey = await self.keyStore.getPrivateKey(overrideSendOptions.txSignerAddress);
-                    const wallet = new ethers_1.Wallet(privateKey, self.transactionsProvider);
-                    contract = new ethers_1.Contract(self.contract.address, self.jsonInterface, wallet);
+                let contract = this.contract;
+                if (txSignerAddress) {
+                    const signer = new this.Signer(txSignerAddress, this.transactionsProvider);
+                    contract = new ethers_1.Contract(this.contract.address, this.jsonInterface, signer);
                 }
                 // send the transaction
-                const broadcastTransaction = await contract[functionName](...callParams, sendOptions);
-                logger.debug(`${broadcastTransaction.hash} is transaction hash and nonce ${broadcastTransaction.nonce} for ${description}`);
-                const transactionReceipt = await self.processTransaction(broadcastTransaction.hash, description, sendOptions.gasLimit);
+                let txHash = await contract[functionName](...callParams, sendOptions);
+                // if the signer was a Wallet then the hash is in an object
+                if (txHash.hash) {
+                    txHash = txHash.hash;
+                }
+                logger.debug(`${txHash} is transaction hash for ${description}`);
+                const transactionReceipt = await this.processTransaction(txHash, description, sendOptions.gasLimit);
                 resolve(transactionReceipt);
             }
             catch (err) {
@@ -112,7 +114,10 @@ class BaseContract {
         logger.debug(`Status ${transactionReceipt.status} and ${transactionReceipt.gasUsed} gas of ${gasLimit} used for ${description}`);
         // If a status of 0 was returned then the transaction failed. Status 1 means the transaction worked
         if (transactionReceipt.status == 0) {
-            throw VError(`Failed ${hash} transaction with status code ${transactionReceipt.status}. ${transactionReceipt.gasUsed} gas used of ${gasLimit} gas limit.`);
+            const error = new VError(`Failed transaction ${hash} with status code ${transactionReceipt.status}. ${transactionReceipt.gasUsed} gas used of ${gasLimit} gas limit.`);
+            error.txReceipt = transactionReceipt;
+            logger.error(error.stack);
+            throw error;
         }
         return transactionReceipt;
     }
@@ -163,11 +168,11 @@ class BaseContract {
         }
     }
     static loadJsonInterfaceFromFile(filename) {
-        const jsonInterfaceStr = fs_1.readFileSync(filename, 'utf8');
+        const jsonInterfaceStr = fs_1.readFileSync(filename + ".abi", 'utf8');
         return JSON.parse(jsonInterfaceStr);
     }
     static loadBinaryFromFile(filename) {
-        return '0x' + fs_1.readFileSync(filename, 'utf8');
+        return '0x' + fs_1.readFileSync(filename + ".bin", 'utf8');
     }
 }
 exports.default = BaseContract;
