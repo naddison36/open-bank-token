@@ -12,7 +12,7 @@ light = false
 disable = false
 port = 8646
 interface = "local"
-cors = "null"
+cors = []
 apis = ["web3", "eth", "net", "parity", "traces", "rpc", "secretstore"]
 hosts = ["none"]
 

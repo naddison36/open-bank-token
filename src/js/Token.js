@@ -17,7 +17,9 @@ class Token extends BaseContract_1.default {
         this.contractBinary = contractBinary;
         this.defaultSendOptions = defaultSendOptions;
         this.transactions = {};
-        this.contract = new ethers_1.Contract(contractAddress, jsonInterface, this.transactionsProvider);
+        if (contractAddress) {
+            this.contract = new ethers_1.Contract(contractAddress, jsonInterface, this.transactionsProvider);
+        }
     }
     // deploy a new contract
     deployContract(contractOwner, gasLimit = 1900000, gasPrice = 2000000000, symbol, tokenName) {
@@ -155,4 +157,4 @@ class Token extends BaseContract_1.default {
     }
 }
 exports.default = Token;
-//# sourceMappingURL=token.js.map
+//# sourceMappingURL=Token.js.map

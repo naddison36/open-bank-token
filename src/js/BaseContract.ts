@@ -25,7 +25,10 @@ export default class BaseContract
                     gasPrice: 1000000000,
                     gasLimit: 120000})
     {
-        this.contract = new Contract(contractAddress, jsonInterface, this.transactionsProvider);
+        if (contractAddress)
+        {
+            this.contract = new Contract(contractAddress, jsonInterface, this.transactionsProvider);
+        }
     }
 
     // deploy a new contract

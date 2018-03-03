@@ -29,7 +29,10 @@ export default class Token extends BaseContract
         super(transactionsProvider, eventsProvider, keyStore, jsonInterface,
             contractBinary, contractAddress, defaultSendOptions);
 
-        this.contract = new Contract(contractAddress, jsonInterface, this.transactionsProvider);
+        if (contractAddress)
+        {
+            this.contract = new Contract(contractAddress, jsonInterface, this.transactionsProvider);
+        }
     }
 
     // deploy a new contract

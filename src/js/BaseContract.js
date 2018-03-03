@@ -15,7 +15,9 @@ class BaseContract {
         this.jsonInterface = jsonInterface;
         this.contractBinary = contractBinary;
         this.defaultSendOptions = defaultSendOptions;
-        this.contract = new ethers_1.Contract(contractAddress, jsonInterface, this.transactionsProvider);
+        if (contractAddress) {
+            this.contract = new ethers_1.Contract(contractAddress, jsonInterface, this.transactionsProvider);
+        }
     }
     // deploy a new contract
     deployContract(contractOwner, gasLimit, gasPrice, ...contractConstructorParams) {
@@ -53,9 +55,15 @@ class BaseContract {
     async call(functionName, ...callParams) {
         const description = `Call function ${functionName} with params ${callParams.toString()} on contract with address ${this.contract.address}`;
         try {
-            const result = await this.contract[functionName](...callParams);
-            logger.info(`Got ${result[0]} ${description}`);
-            return result[0];
+            const results = await this.contract[functionName](...callParams);
+            let result = results[0];
+            // if an Ethers BigNumber
+            if (results[0]._bn) {
+                // convert to a bn.js BigNumber
+                result = results[0]._bn;
+            }
+            logger.info(`Got ${result} ${description}`);
+            return result;
         }
         catch (err) {
             const error = new VError(err, `Could not get ${description}`);
@@ -65,7 +73,8 @@ class BaseContract {
     }
     async send(functionName, overrideSendOptions, ...callParams) {
         const self = this;
-        let sendOptions = this.defaultSendOptions;
+        // clone the default options
+        let sendOptions = Object.assign({}, this.defaultSendOptions);
         if (overrideSendOptions) {
             sendOptions = {
                 gasPrice: overrideSendOptions.gasPrice || this.defaultSendOptions.gasPrice,
