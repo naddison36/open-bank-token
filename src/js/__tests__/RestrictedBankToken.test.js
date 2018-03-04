@@ -379,4 +379,4 @@ describe("BankToken", () => {
         });
     });
 });
-//# sourceMappingURL=restrictedBankToken.test.js.map
+//# sourceMappingURL=RestrictedBankToken.test.js.map

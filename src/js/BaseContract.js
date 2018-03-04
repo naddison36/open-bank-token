@@ -6,9 +6,9 @@ const logger = require("config-logger");
 const fs_1 = require("fs");
 class BaseContract {
     constructor(transactionsProvider, eventsProvider, Signer, jsonInterface, contractBinary, contractAddress, defaultSendOptions = {
-            gasPrice: 1000000000,
-            gasLimit: 1200000
-        }) {
+        gasPrice: 1000000000,
+        gasLimit: 1200000
+    }) {
         this.transactionsProvider = transactionsProvider;
         this.eventsProvider = eventsProvider;
         this.Signer = Signer;

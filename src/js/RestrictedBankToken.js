@@ -4,9 +4,9 @@ const BaseContract_1 = require("./BaseContract");
 const Token_1 = require("./Token");
 class RestrictedBankToken extends Token_1.default {
     constructor(transactionsProvider, eventsProvider, Signer, contractAddress, defaultSendOptions = {
-            gasPrice: 1000000000,
-            gasLimit: 120000
-        }) {
+        gasPrice: 1000000000,
+        gasLimit: 120000
+    }) {
         super(transactionsProvider, eventsProvider, Signer, null, null, contractAddress, defaultSendOptions);
         const contractBinariesDir = process.cwd() + "/bin/contracts/";
         this.jsonInterface = BaseContract_1.default.loadJsonInterfaceFromFile(contractBinariesDir + "RestrictedBankToken");
@@ -14,9 +14,9 @@ class RestrictedBankToken extends Token_1.default {
     }
     // deploy a new contract
     deployContract(contractOwner, overrideSendOptions = {
-            gasLimit: 1900000,
-            gasPrice: 4000000000
-        }, symbol = "DAD", tokenName = "Digital Australian Dollar") {
+        gasLimit: 1900000,
+        gasPrice: 4000000000
+    }, symbol = "DAD", tokenName = "Digital Australian Dollar") {
         return super.deployContract(contractOwner, overrideSendOptions, symbol, tokenName);
     }
     // deposit an amount of tokens to an address

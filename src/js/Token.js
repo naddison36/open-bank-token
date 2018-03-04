@@ -5,9 +5,9 @@ const VError = require("verror");
 const BaseContract_1 = require("./BaseContract");
 class Token extends BaseContract_1.default {
     constructor(transactionsProvider, eventsProvider, Signer, jsonInterface, contractBinary, contractAddress, defaultSendOptions = {
-            gasPrice: 1000000000,
-            gasLimit: 120000
-        }) {
+        gasPrice: 1000000000,
+        gasLimit: 120000
+    }) {
         super(transactionsProvider, eventsProvider, Signer, jsonInterface, contractBinary, contractAddress, defaultSendOptions);
         this.transactions = {};
         if (contractAddress) {
