@@ -6,8 +6,8 @@ const RestrictedBankToken_1 = require("../RestrictedBankToken");
 const HardcodedSigner_1 = require("../signers/HardcodedSigner");
 const testContractOwner = '0x19E7E376E7C213B7E7e7e46cc70A5dD086DAff2A', depositor1 = '0x1563915e194D8CfBA1943570603F7606A3115508', depositor2 = '0x5CbDd86a2FA8Dc4bDdd8a8f69dBa48572EeC07FB', depositor3 = '0x7564105E977516C53bE337314c7E53838967bDaC';
 describe("BankToken", () => {
-    const transactionsProvider = new ethers_1.providers.JsonRpcProvider("http://localhost:8646", true, 0); // ChainId 100 = 0x64
-    const eventsProvider = new ethers_1.providers.JsonRpcProvider("http://localhost:8646", true, 0); // ChainId 100 = 0x64
+    const transactionsProvider = new ethers_1.providers.JsonRpcProvider("http://localhost:8646", "unspecified");
+    const eventsProvider = new ethers_1.providers.JsonRpcProvider("http://localhost:8646", "unspecified");
     const restrictedBankToken = new RestrictedBankToken_1.default(transactionsProvider, eventsProvider, HardcodedSigner_1.default);
     describe("Deploy contract", () => {
         test('with default arguments', async () => {

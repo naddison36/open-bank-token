@@ -13,10 +13,10 @@ See MIT Licence for further details.
 <https://opensource.org/licenses/MIT>.
 */
 
-pragma solidity ^0.4.18;
+pragma solidity ^0.4.20;
 
 import {ERC20Token} from './erc20Token.sol';
-import {SafeMath} from './lib/safeMaths.sol';
+import {SafeMath} from '../node_modules/zeppelin-solidity/contracts/math/SafeMath.sol';
 
 contract RestrictedBankToken is ERC20Token
 {

@@ -8,9 +8,9 @@ See MIT Licence for further details.
 <https://opensource.org/licenses/MIT>.
 */
 
-pragma solidity ^0.4.18;
+pragma solidity ^0.4.20;
 
-import {SafeMath} from './lib/safeMaths.sol';
+import {SafeMath} from '../node_modules/zeppelin-solidity/contracts/math/SafeMath.sol';
 
 contract ERC20Token
 {
@@ -151,5 +151,5 @@ contract ERC20Token
     }
 
     // do not accept Ether as fallback function is not payable
-    function() {throw;}
+    function() public {throw;}
 }

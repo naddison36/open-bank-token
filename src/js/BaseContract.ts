@@ -96,15 +96,13 @@ export default class BaseContract
 
         try
         {
-            const results = await this.contract[functionName](...callParams);
-
-            let result = results[0];
+            let result = await this.contract[functionName](...callParams);
 
             // if an Ethers BigNumber
-            if (results[0]._bn)
+            if (result._bn)
             {
                 // convert to a bn.js BigNumber
-                result = results[0]._bn;
+                result = result._bn;
             }
 
             logger.info(`Got ${result} from ${description}`);
@@ -219,7 +217,7 @@ export default class BaseContract
                 throw new VError(`event name ${eventName} does not exist on the contract interface`);
             }
 
-            const Event = this.contract.interface.events[eventName]();
+            const Event = this.contract.interface.events[eventName];
 
             const logs = await this.eventsProvider.getLogs({
                 fromBlock: fromBlock,

@@ -11,8 +11,8 @@ const testContractOwner = '0x19E7E376E7C213B7E7e7e46cc70A5dD086DAff2A',
 
 describe("BankToken", ()=>
 {
-    const transactionsProvider = new Providers.JsonRpcProvider("http://localhost:8646", true, 0);  // ChainId 100 = 0x64
-    const eventsProvider = new Providers.JsonRpcProvider("http://localhost:8646", true, 0);  // ChainId 100 = 0x64
+    const transactionsProvider = new Providers.JsonRpcProvider("http://localhost:8646", "unspecified");
+    const eventsProvider = new Providers.JsonRpcProvider("http://localhost:8646", "unspecified");
 
     const restrictedBankToken = new RestrictedBankToken(transactionsProvider, eventsProvider, HardcodedSigner);
 
